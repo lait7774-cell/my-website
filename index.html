@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartSpend | 萌寵收支儀表板 (本地儲存版)</title>
+    <title>SmartSpend | 萌寵收支儀表板 (時間月份版)</title>
     <!-- 引入外部函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -149,6 +149,14 @@
         .val-expense { color: var(--danger); }
         .val-balance { color: var(--primary); }
 
+        /* 篩選器樣式 */
+        .filter-container {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .history-list {
             max-height: 350px;
             overflow-y: auto;
@@ -169,6 +177,9 @@
 
         .item-income { border-left-color: var(--success); }
         .item-expense { border-left-color: var(--danger); }
+
+        .item-info { display: flex; flex-direction: column; }
+        .item-date { font-size: 11px; color: #94a3b8; }
 
         .amount { font-weight: bold; font-size: 1.1rem; }
         .amt-income { color: var(--success); }
@@ -201,17 +212,23 @@
 
     <!-- 結餘統計區 -->
     <div class="card full-width">
+        <div class="filter-container">
+            <label for="month-filter">📅 查看月份：</label>
+            <select id="month-filter" onchange="updateUI()">
+                <!-- 由 JS 動態生成 -->
+            </select>
+        </div>
         <div class="summary-grid">
             <div class="summary-item">
-                <div class="summary-label">總收入 💰</div>
+                <div class="summary-label">當月收入 💰</div>
                 <div id="total-income" class="summary-value val-income">$0</div>
             </div>
             <div class="summary-item">
-                <div class="summary-label">總支出 💸</div>
+                <div class="summary-label">當月支出 💸</div>
                 <div id="total-expense" class="summary-value val-expense">$0</div>
             </div>
             <div class="summary-item">
-                <div class="summary-label">剩餘骨頭 (結餘) 🦴</div>
+                <div class="summary-label">當月結餘 🦴</div>
                 <div id="total-balance" class="summary-value val-balance">$0</div>
             </div>
         </div>
@@ -228,6 +245,7 @@
                 <input type="radio" name="type" id="type-income" value="收入">
                 <label for="type-income">💰 收入</label>
             </div>
+            <input type="date" id="record-date">
             <input type="text" id="desc" placeholder="項目的名稱...">
             <input type="number" id="amount" placeholder="金額 (骨頭)">
             <select id="category">
@@ -245,7 +263,7 @@
     <!-- 圖表分析區 -->
     <div class="card">
         <div class="dog-badge">🎾</div>
-        <h2>📊 支出分類統計</h2>
+        <h2>📊 當月支出比例</h2>
         <div style="max-width: 280px; margin: 0 auto;">
             <canvas id="expenseChart"></canvas>
         </div>
@@ -267,7 +285,7 @@
 
 <script>
     // --- 1. 資料管理 ---
-    const STORAGE_KEY = 'smartspend_data_v2';
+    const STORAGE_KEY = 'smartspend_data_v3';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
     // --- 2. Chart.js 初始化 ---
@@ -294,32 +312,63 @@
     });
 
     window.onload = () => {
+        // 設定預設日期為今天
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('record-date').value = today;
+        
+        initMonthFilter();
         updateUI();
     };
 
+    function initMonthFilter() {
+        const filter = document.getElementById('month-filter');
+        const now = new Date();
+        const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // 預設提供最近 6 個月
+        filter.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const option = document.createElement('option');
+            option.value = ym;
+            option.textContent = `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+            filter.appendChild(option);
+        }
+    }
+
     // --- 3. 核心邏輯 ---
     function addRecord() {
+        const date = document.getElementById('record-date').value;
         const desc = document.getElementById('desc').value;
         const amount = parseInt(document.getElementById('amount').value);
         const category = document.getElementById('category').value;
         const type = document.querySelector('input[name="type"]:checked').value;
 
-        if (!desc || isNaN(amount)) {
-            alert("汪！請寫清楚項目和金額喔！");
+        if (!date || !desc || isNaN(amount)) {
+            alert("汪！日期、項目和金額都要填好喔！");
             return;
         }
 
         const newRecord = {
             id: Date.now(),
+            date, // 使用選定的日期 "YYYY-MM-DD"
             desc,
             amount,
             category,
-            type, // 儲存是「收入」還是「支出」
-            timestamp: Date.now()
+            type,
+            timestamp: new Date(date).getTime()
         };
 
         records.push(newRecord);
         saveData();
+        
+        // 如果新增的日期不在目前的篩選月份中，提示使用者
+        const selectedMonth = document.getElementById('month-filter').value;
+        if (!date.startsWith(selectedMonth)) {
+            alert("汪！紀錄已儲存，但目前正在查看不同月份，請切換月份查看。");
+        }
+        
         updateUI();
 
         document.getElementById('desc').value = '';
@@ -332,26 +381,31 @@
 
     function updateUI() {
         const historyDiv = document.getElementById('history');
+        const selectedMonth = document.getElementById('month-filter').value; // 格式: "YYYY-MM"
         historyDiv.innerHTML = '';
         
         let incomeTotal = 0;
         let expenseTotal = 0;
         let categoryExpenseTotals = new Array(categories.length).fill(0);
 
-        if (records.length > 0) {
-            const sortedRecords = [...records].sort((a, b) => b.timestamp - a.timestamp);
+        // 篩選選定月份的紀錄
+        const filteredRecords = records.filter(r => r.date.startsWith(selectedMonth));
+
+        if (filteredRecords.length > 0) {
+            // 按日期排序 (由新到舊)
+            const sortedRecords = [...filteredRecords].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
             
             sortedRecords.forEach(item => {
                 const isIncome = item.type === '收入';
                 if (isIncome) incomeTotal += item.amount;
                 else expenseTotal += item.amount;
 
-                // 清單顯示
                 const div = document.createElement('div');
                 div.className = `history-item ${isIncome ? 'item-income' : 'item-expense'}`;
                 div.innerHTML = `
-                    <span>
-                        <strong>🐾 [${item.type}] ${item.category}</strong><br>
+                    <span class="item-info">
+                        <span class="item-date">${item.date}</span>
+                        <strong>🐾 [${item.type}] ${item.category}</strong>
                         <small style="color:#64748b">${item.desc}</small>
                     </span>
                     <span class="amount ${isIncome ? 'amt-income' : 'amt-expense'}">
@@ -360,14 +414,13 @@
                 `;
                 historyDiv.appendChild(div);
 
-                // 圖表統計 (只計算支出，通常收入不放進圓餅圖)
                 if (!isIncome) {
                     const idx = categories.indexOf(item.category);
                     if (idx !== -1) categoryExpenseTotals[idx] += item.amount;
                 }
             });
         } else {
-            historyDiv.innerHTML = '<p style="text-align: center; color: #94a3b8;">汪！目前還沒有紀錄喔...</p>';
+            historyDiv.innerHTML = `<p style="text-align: center; color: #94a3b8;">汪！${selectedMonth} 還沒有紀錄喔...</p>`;
         }
 
         // 更新統計數字
@@ -386,20 +439,19 @@
             alert("還沒有骨頭紀錄可以匯出喔！");
             return;
         }
-        let csvContent = "時間,類型,類別,項目,金額\n";
-        records.forEach(r => {
-            const date = new Date(r.timestamp).toLocaleDateString();
-            csvContent += `${date},${r.type},${r.category},${r.desc},${r.amount}\n`;
+        let csvContent = "日期,類型,類別,項目,金額\n";
+        records.sort((a,b) => a.date.localeCompare(b.date)).forEach(r => {
+            csvContent += `${r.date},${r.type},${r.category},${r.desc},${r.amount}\n`;
         });
         const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "萌寵收支報告.csv";
+        link.download = "萌寵收支完整報告.csv";
         link.click();
     }
 
     function clearAll() {
-        if (confirm("汪！確定要把辛苦記在電腦裡的帳都埋掉嗎？")) {
+        if (confirm("汪！確定要把辛苦記在電腦裡的「所有月份」帳都埋掉嗎？")) {
             records = [];
             saveData();
             updateUI();
