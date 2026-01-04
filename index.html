@@ -47,7 +47,24 @@
 
         .full-width { grid-column: 1 / -1; }
 
-        h1, h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        /* 標題置中設定 */
+        h1 { 
+            margin-top: 0; 
+            color: var(--primary); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; /* 置中對齊內容 */
+            gap: 10px; 
+            text-align: center;
+        }
+
+        h2 { 
+            margin-top: 0; 
+            color: var(--primary); 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
 
         .input-group {
             display: flex;
@@ -125,7 +142,8 @@
 <div class="dashboard">
     <!-- 標題區 -->
     <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
-        <h1>🐕SmartSpend 萌寵記帳儀表板</h1>
+        <span style="font-size: 3rem;">🐕</span>
+        <h1>SmartSpend 萌寵記帳儀表板</h1>
         <p>汪！資料現在會存在你的電腦裡，不用擔心網路喔！🐾</p>
     </div>
 
