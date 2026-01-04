@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartSpend | 萌寵記帳儀表板 (本地儲存版)</title>
+    <title>SmartSpend | 萌寵收支儀表板 (本地儲存版)</title>
     <!-- 引入外部函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -53,7 +53,7 @@
             color: var(--primary); 
             display: flex; 
             align-items: center; 
-            justify-content: center; /* 置中對齊內容 */
+            justify-content: center; 
             gap: 10px; 
             text-align: center;
         }
@@ -65,6 +65,30 @@
             align-items: center; 
             gap: 10px; 
         }
+
+        /* 收支切換開關 */
+        .type-toggle {
+            display: flex;
+            background: #f1f5f9;
+            padding: 5px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .type-toggle label {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .type-toggle input { display: none; }
+        
+        #type-expense:checked + label { background: var(--danger); color: white; }
+        #type-income:checked + label { background: var(--success); color: white; }
 
         .input-group {
             display: flex;
@@ -101,7 +125,29 @@
         .btn-add { background: var(--primary); color: white; box-shadow: 0 4px 0 #b45309; }
         .btn-add:active { transform: translateY(2px); box-shadow: 0 2px 0 #b45309; }
         
-        .btn-export { background: var(--success); color: white; margin-top: 15px; }
+        .btn-export { background: #64748b; color: white; margin-top: 15px; }
+
+        /* 統計數字 */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 15px;
+            border: 1px solid #fde68a;
+        }
+
+        .summary-label { font-size: 12px; color: #64748b; margin-bottom: 5px; }
+        .summary-value { font-size: 1.2rem; font-weight: bold; }
+        .val-income { color: var(--success); }
+        .val-expense { color: var(--danger); }
+        .val-balance { color: var(--primary); }
 
         .history-list {
             max-height: 350px;
@@ -118,10 +164,15 @@
             border-radius: 12px;
             margin-bottom: 8px;
             background: #fff;
-            border-left: 5px solid var(--secondary);
+            border-left: 8px solid #ccc;
         }
 
-        .amount { font-weight: bold; color: var(--danger); font-size: 1.1rem; }
+        .item-income { border-left-color: var(--success); }
+        .item-expense { border-left-color: var(--danger); }
+
+        .amount { font-weight: bold; font-size: 1.1rem; }
+        .amt-income { color: var(--success); }
+        .amt-expense { color: var(--danger); }
 
         .dog-badge {
             position: absolute;
@@ -134,6 +185,7 @@
 
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -144,23 +196,47 @@
     <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
         <span style="font-size: 3rem;">🐕</span>
         <h1>SmartSpend 萌寵記帳儀表板</h1>
-        <p>汪！資料現在會存在你的電腦裡，不用擔心網路喔！🐾</p>
+        <p>汪！不管是賺到的肉肉還是花掉的骨頭都要記清楚喔！🐾</p>
+    </div>
+
+    <!-- 結餘統計區 -->
+    <div class="card full-width">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-label">總收入 💰</div>
+                <div id="total-income" class="summary-value val-income">$0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">總支出 💸</div>
+                <div id="total-expense" class="summary-value val-expense">$0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">剩餘骨頭 (結餘) 🦴</div>
+                <div id="total-balance" class="summary-value val-balance">$0</div>
+            </div>
+        </div>
     </div>
 
     <!-- 輸入區 -->
     <div class="card">
         <div class="dog-badge">🦴</div>
-        <h2>➕ 新增小狗開銷</h2>
+        <h2>➕ 新增紀錄</h2>
         <div class="input-group">
-            <input type="text" id="desc" placeholder="吃了什麼或買了什麼？">
+            <div class="type-toggle">
+                <input type="radio" name="type" id="type-expense" value="支出" checked>
+                <label for="type-expense">💸 支出</label>
+                <input type="radio" name="type" id="type-income" value="收入">
+                <label for="type-income">💰 收入</label>
+            </div>
+            <input type="text" id="desc" placeholder="項目的名稱...">
             <input type="number" id="amount" placeholder="金額 (骨頭)">
             <select id="category">
                 <option value="餐飲">🍱 美食餐飲</option>
                 <option value="交通">🚗 汪汪出門</option>
                 <option value="娛樂">🎮 玩耍玩具</option>
                 <option value="學習">📚 學習成長</option>
-                <option value="購物">🛍️ 買買東西</option>
-                <option value="其他">✨ 其他雜項</option>
+                <option value="薪水">💵 勞動所得</option>
+                <option value="其他">✨ 其他項目</option>
             </select>
             <button class="btn-add" onclick="addRecord()">🐶 記一筆帳！</button>
         </div>
@@ -169,7 +245,7 @@
     <!-- 圖表分析區 -->
     <div class="card">
         <div class="dog-badge">🎾</div>
-        <h2>📊 骨頭去哪了？</h2>
+        <h2>📊 支出分類統計</h2>
         <div style="max-width: 280px; margin: 0 auto;">
             <canvas id="expenseChart"></canvas>
         </div>
@@ -190,22 +266,21 @@
 </div>
 
 <script>
-    // --- 1. 資料管理 (使用 localStorage 替代 Firebase) ---
-    const STORAGE_KEY = 'smartspend_data';
+    // --- 1. 資料管理 ---
+    const STORAGE_KEY = 'smartspend_data_v2';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
     // --- 2. Chart.js 初始化 ---
     const ctx = document.getElementById('expenseChart').getContext('2d');
-    // 更新分類清單
-    const categories = ['餐飲', '交通', '娛樂', '學習', '購物', '其他'];
+    const categories = ['餐飲', '交通', '娛樂', '學習', '薪水', '其他'];
 
     const expenseChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: categories,
             datasets: [{
-                data: [0, 0, 0, 0, 0, 0], // 對應 6 個分類
-                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#a78bfa', '#cbd5e1'],
+                data: new Array(categories.length).fill(0),
+                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#10b981', '#cbd5e1'],
                 hoverOffset: 15,
                 borderRadius: 5
             }]
@@ -218,7 +293,6 @@
         }
     });
 
-    // 初始載入介面
     window.onload = () => {
         updateUI();
     };
@@ -228,6 +302,7 @@
         const desc = document.getElementById('desc').value;
         const amount = parseInt(document.getElementById('amount').value);
         const category = document.getElementById('category').value;
+        const type = document.querySelector('input[name="type"]:checked').value;
 
         if (!desc || isNaN(amount)) {
             alert("汪！請寫清楚項目和金額喔！");
@@ -239,17 +314,14 @@
             desc,
             amount,
             category,
+            type, // 儲存是「收入」還是「支出」
             timestamp: Date.now()
         };
 
-        // 存入陣列並更新 localStorage
         records.push(newRecord);
         saveData();
-        
-        // 更新介面
         updateUI();
 
-        // 清空輸入
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
     }
@@ -262,50 +334,67 @@
         const historyDiv = document.getElementById('history');
         historyDiv.innerHTML = '';
         
-        let newTotals = new Array(categories.length).fill(0);
+        let incomeTotal = 0;
+        let expenseTotal = 0;
+        let categoryExpenseTotals = new Array(categories.length).fill(0);
 
         if (records.length > 0) {
-            // 按時間由新到舊排序
             const sortedRecords = [...records].sort((a, b) => b.timestamp - a.timestamp);
             
             sortedRecords.forEach(item => {
+                const isIncome = item.type === '收入';
+                if (isIncome) incomeTotal += item.amount;
+                else expenseTotal += item.amount;
+
+                // 清單顯示
                 const div = document.createElement('div');
-                div.className = 'history-item';
+                div.className = `history-item ${isIncome ? 'item-income' : 'item-expense'}`;
                 div.innerHTML = `
-                    <span><strong>🐾 ${item.category}</strong> | ${item.desc}</span>
-                    <span class="amount">$${item.amount}</span>
+                    <span>
+                        <strong>🐾 [${item.type}] ${item.category}</strong><br>
+                        <small style="color:#64748b">${item.desc}</small>
+                    </span>
+                    <span class="amount ${isIncome ? 'amt-income' : 'amt-expense'}">
+                        ${isIncome ? '+' : '-'}$${item.amount}
+                    </span>
                 `;
                 historyDiv.appendChild(div);
 
-                const idx = categories.indexOf(item.category);
-                if (idx !== -1) newTotals[idx] += item.amount;
+                // 圖表統計 (只計算支出，通常收入不放進圓餅圖)
+                if (!isIncome) {
+                    const idx = categories.indexOf(item.category);
+                    if (idx !== -1) categoryExpenseTotals[idx] += item.amount;
+                }
             });
         } else {
             historyDiv.innerHTML = '<p style="text-align: center; color: #94a3b8;">汪！目前還沒有紀錄喔...</p>';
         }
 
+        // 更新統計數字
+        document.getElementById('total-income').innerText = `$${incomeTotal}`;
+        document.getElementById('total-expense').innerText = `$${expenseTotal}`;
+        document.getElementById('total-balance').innerText = `$${incomeTotal - expenseTotal}`;
+
         // 更新圖表
-        expenseChart.data.datasets[0].data = newTotals;
+        expenseChart.data.datasets[0].data = categoryExpenseTotals;
         expenseChart.update();
     }
 
-    // --- 4. CSV 導出 ---
+    // --- 4. 功能性工具 ---
     function exportCSV() {
         if (records.length === 0) {
             alert("還沒有骨頭紀錄可以匯出喔！");
             return;
         }
-
-        let csvContent = "時間,類別,項目,金額\n";
+        let csvContent = "時間,類型,類別,項目,金額\n";
         records.forEach(r => {
             const date = new Date(r.timestamp).toLocaleDateString();
-            csvContent += `${date},${r.category},${r.desc},${r.amount}\n`;
+            csvContent += `${date},${r.type},${r.category},${r.desc},${r.amount}\n`;
         });
-
         const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "萌寵記帳報告_本地備份.csv";
+        link.download = "萌寵收支報告.csv";
         link.click();
     }
 
