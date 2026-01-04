@@ -158,6 +158,7 @@
                 <option value="餐飲">🍱 美食餐飲</option>
                 <option value="交通">🚗 汪汪出門</option>
                 <option value="娛樂">🎮 玩耍玩具</option>
+                <option value="學習">📚 學習成長</option>
                 <option value="購物">🛍️ 買買東西</option>
                 <option value="其他">✨ 其他雜項</option>
             </select>
@@ -195,15 +196,16 @@
 
     // --- 2. Chart.js 初始化 ---
     const ctx = document.getElementById('expenseChart').getContext('2d');
-    const categories = ['餐飲', '交通', '娛樂', '購物', '其他'];
+    // 更新分類清單
+    const categories = ['餐飲', '交通', '娛樂', '學習', '購物', '其他'];
 
     const expenseChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: categories,
             datasets: [{
-                data: [0, 0, 0, 0, 0],
-                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#a78bfa', '#cbd5e1'],
+                data: [0, 0, 0, 0, 0, 0], // 對應 6 個分類
+                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#a78bfa', '#cbd5e1'],
                 hoverOffset: 15,
                 borderRadius: 5
             }]
@@ -260,7 +262,7 @@
         const historyDiv = document.getElementById('history');
         historyDiv.innerHTML = '';
         
-        let newTotals = [0, 0, 0, 0, 0];
+        let newTotals = new Array(categories.length).fill(0);
 
         if (records.length > 0) {
             // 按時間由新到舊排序
