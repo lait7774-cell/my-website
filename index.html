@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartSpend | 萌寵記帳儀表板 (本地儲存版)</title>
+    <!-- 引入外部函式庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #d97706; /* 柴犬金 */
+            --secondary: #fef3c7;
+            --accent: #f472b6; /* 肉球粉 */
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #fffcf2;
+        }
+
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: #451a03;
+            background-image: radial-gradient(#fbbf24 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
+        }
+
+        .dashboard {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.1);
+            border: 2px solid #fde68a;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        h1, h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input, select {
+            padding: 14px;
+            border: 2px solid #fde68a;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-add { background: var(--primary); color: white; box-shadow: 0 4px 0 #b45309; }
+        .btn-add:active { transform: translateY(2px); box-shadow: 0 2px 0 #b45309; }
+        
+        .btn-export { background: var(--success); color: white; margin-top: 15px; }
+
+        .history-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 15px;
+            padding-right: 5px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            background: #fff;
+            border-left: 5px solid var(--secondary);
+        }
+
+        .amount { font-weight: bold; color: var(--danger); font-size: 1.1rem; }
+
+        .dog-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 4rem;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <!-- 標題區 -->
+    <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
+        <h1>🐕SmartSpend 萌寵記帳儀表板</h1>
+        <p>汪！資料現在會存在你的電腦裡，不用擔心網路喔！🐾</p>
+    </div>
+
+    <!-- 輸入區 -->
+    <div class="card">
+        <div class="dog-badge">🦴</div>
+        <h2>➕ 新增小狗開銷</h2>
+        <div class="input-group">
+            <input type="text" id="desc" placeholder="吃了什麼或買了什麼？">
+            <input type="number" id="amount" placeholder="金額 (骨頭)">
+            <select id="category">
+                <option value="餐飲">🍱 美食餐飲</option>
+                <option value="交通">🚗 汪汪出門</option>
+                <option value="娛樂">🎮 玩耍玩具</option>
+                <option value="購物">🛍️ 買買東西</option>
+                <option value="其他">✨ 其他雜項</option>
+            </select>
+            <button class="btn-add" onclick="addRecord()">🐶 記一筆帳！</button>
+        </div>
+    </div>
+
+    <!-- 圖表分析區 -->
+    <div class="card">
+        <div class="dog-badge">🎾</div>
+        <h2>📊 骨頭去哪了？</h2>
+        <div style="max-width: 280px; margin: 0 auto;">
+            <canvas id="expenseChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 歷史紀錄區 -->
+    <div class="card full-width">
+        <div class="dog-badge">🐾</div>
+        <h2>📜 散步足跡 (本地消費紀錄)</h2>
+        <div id="history" class="history-list">
+            <!-- 動態插入 -->
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-export" onclick="exportCSV()">📥 匯出成果報告</button>
+            <button onclick="clearAll()" style="background:none; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; text-decoration: underline;">埋掉所有紀錄 (重置)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. 資料管理 (使用 localStorage 替代 Firebase) ---
+    const STORAGE_KEY = 'smartspend_data';
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    // --- 2. Chart.js 初始化 ---
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    const categories = ['餐飲', '交通', '娛樂', '購物', '其他'];
+
+    const expenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categories,
+            datasets: [{
+                data: [0, 0, 0, 0, 0],
+                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#a78bfa', '#cbd5e1'],
+                hoverOffset: 15,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            cutout: '65%',
+            plugins: { 
+                legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: 'bold' } } } 
+            }
+        }
+    });
+
+    // 初始載入介面
+    window.onload = () => {
+        updateUI();
+    };
+
+    // --- 3. 核心邏輯 ---
+    function addRecord() {
+        const desc = document.getElementById('desc').value;
+        const amount = parseInt(document.getElementById('amount').value);
+        const category = document.getElementById('category').value;
+
+        if (!desc || isNaN(amount)) {
+            alert("汪！請寫清楚項目和金額喔！");
+            return;
+        }
+
+        const newRecord = {
+            id: Date.now(),
+            desc,
+            amount,
+            category,
+            timestamp: Date.now()
+        };
+
+        // 存入陣列並更新 localStorage
+        records.push(newRecord);
+        saveData();
+        
+        // 更新介面
+        updateUI();
+
+        // 清空輸入
+        document.getElementById('desc').value = '';
+        document.getElementById('amount').value = '';
+    }
+
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function updateUI() {
+        const historyDiv = document.getElementById('history');
+        historyDiv.innerHTML = '';
+        
+        let newTotals = [0, 0, 0, 0, 0];
+
+        if (records.length > 0) {
+            // 按時間由新到舊排序
+            const sortedRecords = [...records].sort((a, b) => b.timestamp - a.timestamp);
+            
+            sortedRecords.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <span><strong>🐾 ${item.category}</strong> | ${item.desc}</span>
+                    <span class="amount">$${item.amount}</span>
+                `;
+                historyDiv.appendChild(div);
+
+                const idx = categories.indexOf(item.category);
+                if (idx !== -1) newTotals[idx] += item.amount;
+            });
+        } else {
+            historyDiv.innerHTML = '<p style="text-align: center; color: #94a3b8;">汪！目前還沒有紀錄喔...</p>';
+        }
+
+        // 更新圖表
+        expenseChart.data.datasets[0].data = newTotals;
+        expenseChart.update();
+    }
+
+    // --- 4. CSV 導出 ---
+    function exportCSV() {
+        if (records.length === 0) {
+            alert("還沒有骨頭紀錄可以匯出喔！");
+            return;
+        }
+
+        let csvContent = "時間,類別,項目,金額\n";
+        records.forEach(r => {
+            const date = new Date(r.timestamp).toLocaleDateString();
+            csvContent += `${date},${r.category},${r.desc},${r.amount}\n`;
+        });
+
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "萌寵記帳報告_本地備份.csv";
+        link.click();
+    }
+
+    function clearAll() {
+        if (confirm("汪！確定要把辛苦記在電腦裡的帳都埋掉嗎？")) {
+            records = [];
+            saveData();
+            updateUI();
+        }
+    }
+</script>
+
+</body>
+</html>
