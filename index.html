@@ -181,6 +181,23 @@
         .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(230, 126, 34, 0.4); }
         .btn-main:active { transform: translateY(0); }
 
+        .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 8px 15px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
         /* --- 歷史清單 --- */
         .history-list { margin-top: 20px; }
         .history-item {
@@ -287,9 +304,12 @@
 
     <!-- 5. 歷史足跡 -->
     <div class="card col-12">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0; font-size: 1.2rem;">📜 散步足跡</h2>
-            <button onclick="clearAll()" style="background: none; border: none; color: #adb5bd; cursor: pointer; text-decoration: underline; font-size: 0.8rem;">清除紀錄</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-outline" onclick="exportData()">📤 匯出 CSV</button>
+                <button onclick="clearAll()" style="background: none; border: none; color: #adb5bd; cursor: pointer; text-decoration: underline; font-size: 0.8rem;">清除紀錄</button>
+            </div>
         </div>
         <div id="history" class="history-list"></div>
     </div>
@@ -446,6 +466,31 @@
         
         // 特殊提示
         if(lv === 4) text.innerText = "汪！主人已經成為理財大師，阿柴覺得好耀眼！✨👑";
+    }
+
+    function exportData() {
+        if(records.length === 0) return alert("汪！目前沒有任何紀錄可以匯出喔！");
+
+        // 建立 CSV 標題
+        let csvContent = "日期,類型,類別,項目名稱,金額\n";
+        
+        // 排序紀錄 (由舊到新) 並加入內容
+        const sortedRecords = [...records].sort((a,b) => a.date.localeCompare(b.date));
+        sortedRecords.forEach(r => {
+            csvContent += `${r.date},${r.type},${r.category},${r.desc},${r.amount}\n`;
+        });
+
+        // 處理中文字碼 (加入 BOM)
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        // 觸發下載
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `阿柴帳本匯出_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     function clearAll() {
