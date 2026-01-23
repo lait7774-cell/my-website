@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartSpend | 萌寵 AI 收支儀表板</title>
-    <!-- 引入 Chart.js -->
+    <title>SmartSpend | 萌寵收支儀表板 (2000-2100 版)</title>
+    <!-- 引入外部函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root {
-            --primary: #d97706;
+            --primary: #d97706; /* 柴犬金 */
             --secondary: #fef3c7;
-            --accent: #f472b6;
+            --accent: #f472b6; /* 肉球粉 */
             --success: #10b981;
             --danger: #ef4444;
             --bg: #fffcf2;
@@ -23,6 +23,8 @@
             margin: 0;
             padding: 20px;
             color: #451a03;
+            background-image: radial-gradient(#fbbf24 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
         }
 
         .dashboard {
@@ -30,310 +32,521 @@
             margin: 0 auto;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 25px;
         }
 
         .card {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.1);
-            border: 1px solid #fde68a;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.1);
+            border: 2px solid #fde68a;
+            position: relative;
+            overflow: hidden;
         }
 
         .full-width { grid-column: 1 / -1; }
 
+        /* --- 阿柴成長系統樣式 --- */
         .pet-container {
-            width: 100px;
-            height: 100px;
-            background: #fff;
-            border: 3px solid var(--primary);
-            border-radius: 50%;
+            position: relative;
+            width: 150px;
+            height: 150px;
             margin: 0 auto 10px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
-            position: relative;
+            font-size: 5rem;
         }
 
         .accessory {
             position: absolute;
-            font-size: 1.5rem;
-            display: none;
+            font-size: 2.5rem;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: scale(0.5) translateY(20px);
         }
-        #acc-crown { top: -10px; right: -5px; }
-        .unlocked { display: block !important; }
+
+        .accessory.unlocked {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        #acc-sunglasses { top: 45px; left: 35px; font-size: 3rem; } /* 墨鏡位置 */
+        #acc-crown { top: -20px; left: 45px; transform: rotate(-15deg) scale(0.5); } /* 皇冠位置 */
+        #acc-crown.unlocked { transform: rotate(-15deg) scale(1.2); }
+
+        .growth-status {
+            font-size: 0.9rem;
+            background: var(--secondary);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        h1 { 
+            margin: 10px 0; 
+            color: var(--primary); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            text-align: center;
+        }
+        /* --- 結束 --- */
+
+        h2 { 
+            margin-top: 0; 
+            color: var(--primary); 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+
+        .type-toggle {
+            display: flex;
+            background: #f1f5f9;
+            padding: 5px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .type-toggle label {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .type-toggle input { display: none; }
+        #type-expense:checked + label { background: var(--danger); color: white; }
+        #type-income:checked + label { background: var(--success); color: white; }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input, select {
+            padding: 14px;
+            border: 2px solid #fde68a;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-add { background: var(--primary); color: white; box-shadow: 0 4px 0 #b45309; }
+        .btn-add:active { transform: translateY(2px); box-shadow: 0 2px 0 #b45309; }
+        
+        .btn-export { background: #64748b; color: white; margin-top: 15px; }
 
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 15px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
         .summary-item {
             text-align: center;
-            padding: 10px;
+            padding: 15px;
+            background: white;
+            border-radius: 15px;
+            border: 1px solid #fde68a;
+        }
+
+        .summary-label { font-size: 12px; color: #64748b; margin-bottom: 5px; }
+        .summary-value { font-size: 1.2rem; font-weight: bold; }
+        .val-income { color: var(--success); }
+        .val-expense { color: var(--danger); }
+        .val-balance { color: var(--primary); }
+
+        .filter-container {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
             background: #fffbeb;
-            border-radius: 10px;
+            padding: 10px 15px;
+            border-radius: 15px;
         }
 
-        h2 { margin: 0 0 15px 0; font-size: 1.2rem; color: var(--primary); }
-
-        .input-group { display: flex; flex-direction: column; gap: 10px; }
-        input, select, button {
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-            font-size: 1rem;
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        .btn-add { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
-        .btn-ai { background: #334155; color: white; border: none; cursor: pointer; }
-        .btn-ai:disabled { background: #94a3b8; cursor: not-allowed; }
+        .history-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 15px;
+            padding-right: 5px;
+        }
 
-        .history-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
         .history-item {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            font-size: 0.9rem;
+            align-items: center;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            background: #fff;
+            border-left: 8px solid #ccc;
         }
 
-        .val-income { color: var(--success); font-weight: bold; }
-        .val-expense { color: var(--danger); font-weight: bold; }
+        .item-income { border-left-color: var(--success); }
+        .item-expense { border-left-color: var(--danger); }
 
-        @media (max-width: 600px) { .dashboard { grid-template-columns: 1fr; } }
+        .item-info { display: flex; flex-direction: column; }
+        .item-date { font-size: 11px; color: #94a3b8; }
+
+        .amount { font-weight: bold; font-size: 1.1rem; }
+        .amt-income { color: var(--success); }
+        .amt-expense { color: var(--danger); }
+
+        .dog-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 4rem;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
-    <!-- 阿柴助理 -->
-    <div class="card full-width" style="text-align: center;">
+    <!-- 阿柴成長室 -->
+    <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
         <div class="pet-container">
-            🐕 <span id="acc-crown" class="accessory">👑</span>
+            <span id="pet-main">🐕</span>
+            <!-- 配件層 -->
+            <span id="acc-sunglasses" class="accessory">🕶️</span>
+            <span id="acc-crown" class="accessory">👑</span>
         </div>
-        <div style="font-weight: bold; margin-bottom: 5px;">汪！我是阿柴 AI 記帳助手</div>
-        <div style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">(沒有 API Key 時，我會啟動「柴柴直覺」模擬解析喔！)</div>
-        <div class="input-group">
-            <input type="text" id="ai-input" placeholder="例如：晚餐花了 150 元">
-            <button class="btn-ai" id="btn-ai" onclick="processAI()">汪！解析</button>
-            <div id="ai-status" style="font-size: 0.8rem; color: #b45309; margin-top: 5px;"></div>
-        </div>
+        <h1>SmartSpend 萌寵成長室</h1>
+        <div id="growth-text" class="growth-status">汪！快去記帳讓我變酷！🐾</div>
+        <p style="font-size: 13px; color: #b45309; margin-top: 5px;">
+            成就解鎖條件：🕶️ 累積記帳滿 3 天 | 👑 當月儲蓄率達 50%
+        </p>
     </div>
 
-    <!-- 統計 -->
+    <!-- 結餘統計區與年月篩選 -->
     <div class="card full-width">
-        <div style="display: flex; gap: 10px;">
-            <select id="year-filter"></select>
-            <select id="month-filter">
-                <option value="01">1月</option><option value="02">2月</option>
-                <option value="03">3月</option><option value="04">4月</option>
-                <option value="05">5月</option><option value="06">6月</option>
-                <option value="07">7月</option><option value="08">8月</option>
-                <option value="09">9月</option><option value="10">10月</option>
-                <option value="11">11月</option><option value="12">12月</option>
-            </select>
+        <div class="filter-container">
+            <div class="filter-item">
+                <label for="year-filter">📅 選擇年份：</label>
+                <select id="year-filter" onchange="updateUI()"></select>
+            </div>
+            <div class="filter-item">
+                <label for="month-filter">月份：</label>
+                <select id="month-filter" onchange="updateUI()">
+                    <option value="01">1月</option>
+                    <option value="02">2月</option>
+                    <option value="03">3月</option>
+                    <option value="04">4月</option>
+                    <option value="05">5月</option>
+                    <option value="06">6月</option>
+                    <option value="07">7月</option>
+                    <option value="08">8月</option>
+                    <option value="09">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                </select>
+            </div>
         </div>
         <div class="summary-grid">
-            <div class="summary-item">收入<div id="total-income" class="val-income">$0</div></div>
-            <div class="summary-item">支出<div id="total-expense" class="val-expense">$0</div></div>
-            <div class="summary-item">結餘<div id="total-balance">$0</div></div>
+            <div class="summary-item">
+                <div class="summary-label">該月總收入 💰</div>
+                <div id="total-income" class="summary-value val-income">$0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">該月總支出 💸</div>
+                <div id="total-expense" class="summary-value val-expense">$0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">該月結餘 🦴</div>
+                <div id="total-balance" class="summary-value val-balance">$0</div>
+            </div>
         </div>
     </div>
 
-    <!-- 新增紀錄 -->
+    <!-- 輸入區 -->
     <div class="card">
-        <h2>➕ 手動記帳</h2>
+        <div class="dog-badge">🦴</div>
+        <h2>➕ 新增紀錄</h2>
         <div class="input-group">
-            <select id="type">
-                <option value="支出">💸 支出</option>
-                <option value="收入">💰 收入</option>
+            <div class="type-toggle">
+                <input type="radio" name="type" id="type-expense" value="支出" checked>
+                <label for="type-expense">💸 支出</label>
+                <input type="radio" name="type" id="type-income" value="收入">
+                <label for="type-income">💰 收入</label>
+            </div>
+            <input type="date" id="record-date">
+            <input type="text" id="desc" placeholder="項目的名稱...">
+            <input type="number" id="amount" placeholder="金額 (骨頭)">
+            <select id="category">
+                <option value="餐飲">🍱 美食餐飲</option>
+                <option value="交通">🚗 汪汪出門</option>
+                <option value="娛樂">🎮 玩耍玩具</option>
+                <option value="學習">📚 學習成長</option>
+                <option value="薪水">💵 勞動所得</option>
+                <option value="其他">✨ 其他項目</option>
             </select>
-            <input type="date" id="date">
-            <input type="text" id="desc" placeholder="項目內容">
-            <input type="number" id="amount" placeholder="金額">
-            <button class="btn-add" onclick="addRecord()">🐶 存進骨頭盒</button>
+            <button class="btn-add" onclick="addRecord()">🐶 記一筆帳！</button>
         </div>
     </div>
 
-    <!-- 圖表 -->
+    <!-- 圖表分析區 -->
     <div class="card">
-        <h2>📊 支出佔比</h2>
-        <canvas id="expenseChart" height="200"></canvas>
+        <div class="dog-badge">🎾</div>
+        <h2>📊 類別支出比例</h2>
+        <div style="max-width: 280px; margin: 0 auto;">
+            <canvas id="expenseChart"></canvas>
+        </div>
     </div>
 
-    <!-- 歷史 -->
+    <!-- 歷史紀錄區 -->
     <div class="card full-width">
-        <h2>📜 記帳歷史</h2>
+        <div class="dog-badge">🐾</div>
+        <h2>📜 散步足跡 (本地消費紀錄)</h2>
         <div id="history" class="history-list"></div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-export" onclick="exportCSV()">📥 匯出完整報表</button>
+            <button onclick="clearAll()" style="background:none; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; text-decoration: underline;">清除所有資料</button>
+        </div>
     </div>
 </div>
 
 <script>
-    const apiKey = ""; // 此處留空觸發模擬模式
-    const STORAGE_KEY = 'smart_spend_simple_v1';
+    // --- 1. 資料庫初始化 ---
+    const STORAGE_KEY = 'smartspend_data_v8';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    let chart = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const now = new Date();
-        const yearSelect = document.getElementById('year-filter');
-        const monthSelect = document.getElementById('month-filter');
-        
-        for(let i=2024; i<=2026; i++) {
-            yearSelect.add(new Option(i + "年", i));
+    // --- 2. Chart.js 初始化 ---
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    const categories = ['餐飲', '交通', '娛樂', '學習', '薪水', '其他'];
+    const expenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categories,
+            datasets: [{
+                data: new Array(categories.length).fill(0),
+                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#10b981', '#cbd5e1'],
+                hoverOffset: 15,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            cutout: '65%',
+            plugins: { 
+                legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: 'bold' } } } 
+            }
         }
-        
-        yearSelect.value = now.getFullYear();
-        monthSelect.value = String(now.getMonth() + 1).padStart(2, '0');
-        document.getElementById('date').value = now.toISOString().split('T')[0];
-
-        yearSelect.onchange = updateUI;
-        monthSelect.onchange = updateUI;
-
-        initChart();
-        updateUI();
     });
 
-    function initChart() {
-        const ctx = document.getElementById('expenseChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['支出總額'],
-                datasets: [{ data: [0], backgroundColor: ['#fbbf24'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+    window.onload = () => {
+        const now = new Date();
+        document.getElementById('record-date').value = now.toISOString().split('T')[0];
+        initYearFilter(now.getFullYear());
+        document.getElementById('month-filter').value = String(now.getMonth() + 1).padStart(2, '0');
+        updateUI();
+    };
+
+    function initYearFilter(defaultYear) {
+        const yearFilter = document.getElementById('year-filter');
+        yearFilter.innerHTML = '';
+        for (let y = 2100; y >= 2000; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = `${y} 年`;
+            if (y === defaultYear) opt.selected = true;
+            yearFilter.appendChild(opt);
+        }
     }
 
-    // 模擬解析功能：當 API 不可用時使用
-    function simulateAI(input) {
-        const amountMatch = input.match(/\d+/);
-        const amount = amountMatch ? parseInt(amountMatch[0]) : 0;
-        let type = "支出";
-        if (input.includes("領錢") || input.includes("薪水") || input.includes("收入")) type = "收入";
+    // --- 3. 遊戲化邏輯：檢查阿柴成長狀態 ---
+    function checkGrowth(currentIncome, currentExpense) {
+        // A. 計算總記帳天數 (不重複日期)
+        const uniqueDays = new Set(records.map(r => r.date)).size;
         
-        const desc = input.replace(/\d+/, '').replace(/元|花了|收入|領了/g, '').trim() || "生活雜項";
-        
-        return { desc, amount, type };
-    }
+        // B. 計算儲蓄率 (結餘 / 收入)
+        const savingsRate = currentIncome > 0 ? (currentIncome - currentExpense) / currentIncome : 0;
 
-    async function processAI() {
-        const input = document.getElementById('ai-input').value.trim();
-        const status = document.getElementById('ai-status');
-        const btn = document.getElementById('btn-ai');
-        
-        if(!input) return;
+        // 更新 UI 配件
+        const accSunglasses = document.getElementById('acc-sunglasses');
+        const accCrown = document.getElementById('acc-crown');
+        const growthText = document.getElementById('growth-text');
 
-        btn.disabled = true;
-        status.innerText = "汪！阿柴努力解析中...";
+        let statusMsg = `汪！我已經陪你散步 ${uniqueDays} 天了！`;
 
-        // 檢查金鑰，若無則啟動模擬
-        if(!apiKey || apiKey === "") {
-            setTimeout(() => {
-                const result = simulateAI(input);
-                document.getElementById('desc').value = result.desc;
-                document.getElementById('amount').value = result.amount;
-                document.getElementById('type').value = result.type;
-                status.innerText = "汪！主人的鑰匙還沒給，我先用「柴柴直覺」幫你解析好了！確認後請點擊新增。";
-                btn.disabled = false;
-            }, 800);
-            return;
+        // 條件 1: 滿 3 天解鎖墨鏡
+        if (uniqueDays >= 3) {
+            accSunglasses.classList.add('unlocked');
+            statusMsg = "汪！我是街頭最酷的柴犬！😎";
+        } else {
+            accSunglasses.classList.remove('unlocked');
         }
-        
-        try {
-            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `你是一個記帳機器人。請將「${input}」解析為 JSON。例如「晚餐100元」解析為 {"desc": "晚餐", "amount": 100, "type": "支出"}。請只輸出 JSON 字串。` }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                })
-            });
 
-            if(!resp.ok) throw new Error("API_ERROR");
-
-            const data = await resp.json();
-            const rawContent = data.candidates[0].content.parts[0].text;
-            const jsonMatch = rawContent.match(/\{.*\}/s);
-            const result = JSON.parse(jsonMatch ? jsonMatch[0] : rawContent);
-            
-            if(result.desc) document.getElementById('desc').value = result.desc;
-            if(result.amount) document.getElementById('amount').value = result.amount;
-            if(result.type) document.getElementById('type').value = result.type;
-            
-            status.innerText = "汪！AI 解析完成了！檢查一下內容再點擊新增吧！";
-        } catch(e) {
-            status.innerText = "汪...AI 暫時連不上，我改用「柴柴直覺」幫你解析了！";
-            const result = simulateAI(input);
-            document.getElementById('desc').value = result.desc;
-            document.getElementById('amount').value = result.amount;
-        } finally {
-            btn.disabled = false;
+        // 條件 2: 儲蓄率 > 50% 解鎖皇冠
+        if (savingsRate >= 0.5 && (currentIncome - currentExpense) > 0) {
+            accCrown.classList.add('unlocked');
+            statusMsg = "汪嗚！你是省錢國王！👑";
+        } else {
+            accCrown.classList.remove('unlocked');
         }
+
+        growthText.innerText = statusMsg;
     }
 
     function addRecord() {
-        const record = {
-            id: Date.now(),
-            date: document.getElementById('date').value,
-            desc: document.getElementById('desc').value,
-            amount: parseInt(document.getElementById('amount').value),
-            type: document.getElementById('type').value
-        };
+        const dateInput = document.getElementById('record-date').value;
+        const desc = document.getElementById('desc').value;
+        const amount = parseInt(document.getElementById('amount').value);
+        const category = document.getElementById('category').value;
+        const type = document.querySelector('input[name="type"]:checked').value;
 
-        if(!record.desc || isNaN(record.amount)) {
-            alert("汪！內容跟金額都要填好喔！");
+        if (!dateInput || !desc || isNaN(amount)) {
+            alert("汪！日期、項目與金額缺一不可喔！");
             return;
         }
 
-        records.push(record);
+        const newRecord = {
+            id: Date.now(),
+            date: dateInput,
+            desc,
+            amount,
+            category,
+            type
+        };
+
+        records.push(newRecord);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-        updateUI();
         
+        const recordYear = new Date(dateInput).getFullYear();
+        const recordMonth = dateInput.split('-')[1];
+        
+        document.getElementById('year-filter').value = recordYear;
+        document.getElementById('month-filter').value = recordMonth;
+        
+        updateUI();
+
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
-        document.getElementById('ai-input').value = '';
-        document.getElementById('ai-status').innerText = "記好一筆了！主人真棒汪！";
     }
 
     function updateUI() {
-        const y = document.getElementById('year-filter').value;
-        const m = document.getElementById('month-filter').value;
-        const filterStr = `${y}-${m}`;
-        
-        const filtered = records.filter(r => r.date.startsWith(filterStr));
         const historyDiv = document.getElementById('history');
+        const selectedYear = document.getElementById('year-filter').value;
+        const selectedMonth = document.getElementById('month-filter').value;
+        const prefix = `${selectedYear}-${selectedMonth}`;
+        
         historyDiv.innerHTML = '';
-        
-        let inc = 0, exp = 0;
-        filtered.sort((a,b) => b.id - a.id).forEach(r => {
-            if(r.type === '收入') inc += r.amount; else exp += r.amount;
-            historyDiv.innerHTML += `
-                <div class="history-item">
-                    <span>${r.date.split('-').slice(1).join('/')} ${r.desc}</span>
-                    <span class="${r.type === '收入' ? 'val-income' : 'val-expense'}">${r.type === '收入' ? '+' : '-'}${r.amount}</span>
-                </div>`;
-        });
+        let incomeTotal = 0, expenseTotal = 0;
+        let catTotals = new Array(categories.length).fill(0);
 
-        document.getElementById('total-income').innerText = `$${inc}`;
-        document.getElementById('total-expense').innerText = `$${exp}`;
-        document.getElementById('total-balance').innerText = `$${inc - exp}`;
-        
-        const crown = document.getElementById('acc-crown');
-        if(inc - exp > 2000) crown.classList.add('unlocked');
-        else crown.classList.remove('unlocked');
-        
-        if(chart) {
-            chart.data.datasets[0].data = [exp];
-            chart.update();
+        const filtered = records.filter(r => r.date.startsWith(prefix));
+
+        if (filtered.length > 0) {
+            const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+            
+            sorted.forEach(item => {
+                const isInc = item.type === '收入';
+                if (isInc) incomeTotal += item.amount;
+                else expenseTotal += item.amount;
+
+                const div = document.createElement('div');
+                div.className = `history-item ${isInc ? 'item-income' : 'item-expense'}`;
+                div.innerHTML = `
+                    <span class="item-info">
+                        <span class="item-date">${item.date}</span>
+                        <strong>🐾 [${item.type}] ${item.category}</strong>
+                        <small style="color:#64748b">${item.desc}</small>
+                    </span>
+                    <span class="amount ${isInc ? 'amt-income' : 'amt-expense'}">
+                        ${isInc ? '+' : '-'}$${item.amount}
+                    </span>
+                `;
+                historyDiv.appendChild(div);
+
+                if (!isInc) {
+                    const idx = categories.indexOf(item.category);
+                    if (idx !== -1) catTotals[idx] += item.amount;
+                }
+            });
+        } else {
+            historyDiv.innerHTML = `<p style="text-align: center; color: #94a3b8; padding: 20px;">汪！${selectedYear}年${selectedMonth}月 還沒有記帳紀錄喔。</p>`;
+        }
+
+        document.getElementById('total-income').innerText = `$${incomeTotal}`;
+        document.getElementById('total-expense').innerText = `$${expenseTotal}`;
+        document.getElementById('total-balance').innerText = `$${incomeTotal - expenseTotal}`;
+
+        expenseChart.data.datasets[0].data = catTotals;
+        expenseChart.update();
+
+        // 觸發遊戲化檢查
+        checkGrowth(incomeTotal, expenseTotal);
+    }
+
+    function exportCSV() {
+        if (records.length === 0) return alert("汪！沒有骨頭可以匯出。");
+        let csv = "日期,類型,類別,項目,金額\n";
+        records.sort((a,b) => a.date.localeCompare(b.date)).forEach(r => {
+            csv += `${r.date},${r.type},${r.category},${r.desc},${r.amount}\n`;
+        });
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `SmartSpend_我的記帳本.csv`;
+        link.click();
+    }
+
+    function clearAll() {
+        if (confirm("汪！確定要埋掉所有的紀錄嗎？（清除後無法復原）")) {
+            records = [];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            updateUI();
         }
     }
 </script>
+
 </body>
 </html>
