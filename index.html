@@ -91,6 +91,7 @@
 
         .btn-add { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
         .btn-ai { background: #334155; color: white; border: none; cursor: pointer; }
+        .btn-ai:disabled { background: #94a3b8; cursor: not-allowed; }
 
         .history-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
         .history-item {
@@ -118,8 +119,8 @@
         <div style="font-weight: bold; margin-bottom: 15px;">汪！我是阿柴 AI 記帳助手</div>
         <div class="input-group">
             <input type="text" id="ai-input" placeholder="例如：晚餐花了 150 元">
-            <button class="btn-ai" onclick="processAI()">汪！解析</button>
-            <div id="ai-status" style="font-size: 0.8rem; color: #666;"></div>
+            <button class="btn-ai" id="btn-ai" onclick="processAI()">汪！解析</button>
+            <div id="ai-status" style="font-size: 0.8rem; color: #b45309; margin-top: 5px;"></div>
         </div>
     </div>
 
@@ -172,18 +173,16 @@
 </div>
 
 <script>
-    const apiKey = "";
+    const apiKey = ""; // 此處由環境提供
     const STORAGE_KEY = 'smart_spend_simple_v1';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     let chart = null;
 
-    // 初始化
     document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         const yearSelect = document.getElementById('year-filter');
         const monthSelect = document.getElementById('month-filter');
         
-        // 填寫年份
         for(let i=2024; i<=2026; i++) {
             yearSelect.add(new Option(i + "年", i));
         }
@@ -192,7 +191,6 @@
         monthSelect.value = String(now.getMonth() + 1).padStart(2, '0');
         document.getElementById('date').value = now.toISOString().split('T')[0];
 
-        // 監聽變動
         yearSelect.onchange = updateUI;
         monthSelect.onchange = updateUI;
 
@@ -212,10 +210,19 @@
     }
 
     async function processAI() {
-        const input = document.getElementById('ai-input').value;
+        const input = document.getElementById('ai-input').value.trim();
         const status = document.getElementById('ai-status');
+        const btn = document.getElementById('btn-ai');
+        
         if(!input) return;
 
+        // 如果 apiKey 為空，模擬阿柴對話
+        if(!apiKey) {
+            status.innerText = "汪！主人沒給我鑰匙 (API Key)，我只能看不能解析喔...請先手動記帳。";
+            return;
+        }
+
+        btn.disabled = true;
         status.innerText = "汪！解析中...";
         
         try {
@@ -223,19 +230,32 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: `請解析記帳內容「${input}」，輸出為 JSON：{"desc": "項目", "amount": 數字, "type": "支出"或"收入"}` }] }],
+                    contents: [{ parts: [{ text: `請解析記帳內容「${input}」，輸出為純 JSON：{"desc": "項目", "amount": 數字, "type": "支出"或"收入"}` }] }],
                     generationConfig: { responseMimeType: "application/json" }
                 })
             });
+
+            if(resp.status === 403) {
+                status.innerText = "汪嗚！API Key 好像不對，伺服器拒絕了我 (403)。";
+                btn.disabled = false;
+                return;
+            }
+
             const data = await resp.json();
-            const result = JSON.parse(data.candidates[0].content.parts[0].text);
+            const rawContent = data.candidates[0].content.parts[0].text;
+            // 嘗試提取 JSON 內容
+            const jsonMatch = rawContent.match(/\{.*\}/s);
+            const result = JSON.parse(jsonMatch ? jsonMatch[0] : rawContent);
             
-            document.getElementById('desc').value = result.desc;
-            document.getElementById('amount').value = result.amount;
+            document.getElementById('desc').value = result.desc || "";
+            document.getElementById('amount').value = result.amount || "";
             document.getElementById('type').value = result.type || "支出";
-            status.innerText = "汪！解析好了，請點擊新增！";
+            status.innerText = "汪！解析好了，請確認內容後點擊新增！";
         } catch(e) {
-            status.innerText = "汪...失敗了，請手動輸入。";
+            console.error(e);
+            status.innerText = "汪...解析出了一點錯，可以試試看手動輸入。";
+        } finally {
+            btn.disabled = false;
         }
     }
 
@@ -248,7 +268,10 @@
             type: document.getElementById('type').value
         };
 
-        if(!record.desc || isNaN(record.amount)) return alert("請填寫內容與金額！");
+        if(!record.desc || isNaN(record.amount)) {
+            alert("汪嗚！內容跟金額都要填喔！");
+            return;
+        }
 
         records.push(record);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
@@ -256,6 +279,7 @@
         
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
+        document.getElementById('ai-status').innerText = "記好囉！主人真棒汪！";
     }
 
     function updateUI() {
@@ -268,7 +292,7 @@
         historyDiv.innerHTML = '';
         
         let inc = 0, exp = 0;
-        filtered.forEach(r => {
+        filtered.sort((a,b) => b.id - a.id).forEach(r => {
             if(r.type === '收入') inc += r.amount; else exp += r.amount;
             historyDiv.innerHTML += `
                 <div class="history-item">
@@ -284,7 +308,7 @@
         if(inc - exp > 1000) document.getElementById('acc-crown').classList.add('unlocked');
         
         if(chart) {
-            chart.data.datasets[0].data = [exp, 0, 0, 0]; // 簡單模擬
+            chart.data.datasets[0].data = [exp, 0, 0, 0];
             chart.update();
         }
     }
