@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartSpend | 萌寵收支儀表板 (2000-2100 版)</title>
+    <title>SmartSpend | 萌寵收支儀表板 (豪華進階版)</title>
     <!-- 引入外部函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -47,11 +47,11 @@
 
         .full-width { grid-column: 1 / -1; }
 
-        /* --- 阿柴成長系統樣式 --- */
+        /* --- 阿柴進階成長系統樣式 --- */
         .pet-container {
             position: relative;
-            width: 150px;
-            height: 150px;
+            width: 160px;
+            height: 160px;
             margin: 0 auto 10px;
             background: white;
             border-radius: 50%;
@@ -59,15 +59,21 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 5rem;
+            font-size: 5.5rem;
+            transition: box-shadow 0.5s;
+        }
+
+        /* 成就達成時的高光效果 */
+        .pet-container.glow {
+            box-shadow: 0 0 30px var(--primary);
         }
 
         .accessory {
             position: absolute;
-            font-size: 2.5rem;
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             opacity: 0;
             transform: scale(0.5) translateY(20px);
+            pointer-events: none;
         }
 
         .accessory.unlocked {
@@ -75,19 +81,33 @@
             transform: scale(1) translateY(0);
         }
 
-        #acc-sunglasses { top: 45px; left: 35px; font-size: 3rem; } /* 墨鏡位置 */
-        #acc-crown { top: -20px; left: 45px; transform: rotate(-15deg) scale(0.5); } /* 皇冠位置 */
-        #acc-crown.unlocked { transform: rotate(-15deg) scale(1.2); }
+        #acc-sunglasses { top: 50px; left: 38px; font-size: 3rem; z-index: 2; } 
+        #acc-crown { top: -25px; left: 50px; transform: rotate(-15deg) scale(0.5); font-size: 3rem; z-index: 3; }
+        #acc-crown.unlocked { transform: rotate(-15deg) scale(1.3); }
+        #acc-bowtie { bottom: 10px; left: 55px; font-size: 2.5rem; z-index: 1; }
+
+        .growth-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
 
         .growth-status {
-            font-size: 0.9rem;
+            font-size: 1rem;
             background: var(--secondary);
-            padding: 5px 15px;
+            padding: 8px 20px;
             border-radius: 20px;
             display: inline-block;
             margin-top: 10px;
             font-weight: bold;
             color: var(--primary);
+            border: 1px solid var(--primary);
         }
 
         h1 { 
@@ -253,17 +273,19 @@
 
 <div class="dashboard">
     <!-- 阿柴成長室 -->
-    <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
-        <div class="pet-container">
+    <div class="card full-width" id="growth-room" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
+        <div class="growth-badge" id="lv-badge">Lv.1 新手柴</div>
+        <div class="pet-container" id="pet-aura">
             <span id="pet-main">🐕</span>
             <!-- 配件層 -->
             <span id="acc-sunglasses" class="accessory">🕶️</span>
             <span id="acc-crown" class="accessory">👑</span>
+            <span id="acc-bowtie" class="accessory">🎀</span>
         </div>
         <h1>SmartSpend 萌寵成長室</h1>
         <div id="growth-text" class="growth-status">汪！快去記帳讓我變酷！🐾</div>
         <p style="font-size: 13px; color: #b45309; margin-top: 5px;">
-            成就解鎖條件：🕶️ 累積記帳滿 3 天 | 👑 當月儲蓄率達 50%
+            成就解鎖：🕶️ 累積 3 天 | 👑 儲蓄率 > 50% | 🎀 至少記一筆 | 💎 升級解鎖更多
         </p>
     </div>
 
@@ -402,38 +424,68 @@
         }
     }
 
-    // --- 3. 遊戲化邏輯：檢查阿柴成長狀態 ---
+    // --- 3. 進階遊戲化邏輯 ---
     function checkGrowth(currentIncome, currentExpense) {
-        // A. 計算總記帳天數 (不重複日期)
+        // A. 計算總資料
         const uniqueDays = new Set(records.map(r => r.date)).size;
-        
-        // B. 計算儲蓄率 (結餘 / 收入)
+        const totalCount = records.length;
         const savingsRate = currentIncome > 0 ? (currentIncome - currentExpense) / currentIncome : 0;
 
-        // 更新 UI 配件
+        // B. 取得 UI 元件
         const accSunglasses = document.getElementById('acc-sunglasses');
         const accCrown = document.getElementById('acc-crown');
+        const accBowtie = document.getElementById('acc-bowtie');
         const growthText = document.getElementById('growth-text');
+        const petMain = document.getElementById('pet-main');
+        const petAura = document.getElementById('pet-aura');
+        const lvBadge = document.getElementById('lv-badge');
 
-        let statusMsg = `汪！我已經陪你散步 ${uniqueDays} 天了！`;
+        // C. 等級判定
+        let lv = 1;
+        let lvName = "新手柴";
+        if (totalCount >= 50) { lv = 4; lvName = "理財大師"; }
+        else if (totalCount >= 20) { lv = 3; lvName = "記帳專家"; }
+        else if (totalCount >= 5) { lv = 2; lvName = "勤奮小柴"; }
+        lvBadge.innerText = `Lv.${lv} ${lvName}`;
 
-        // 條件 1: 滿 3 天解鎖墨鏡
+        // D. 配件解鎖
+        let unlockedCount = 0;
+
+        // 墨鏡：累積 3 天
         if (uniqueDays >= 3) {
             accSunglasses.classList.add('unlocked');
-            statusMsg = "汪！我是街頭最酷的柴犬！😎";
+            unlockedCount++;
         } else {
             accSunglasses.classList.remove('unlocked');
         }
 
-        // 條件 2: 儲蓄率 > 50% 解鎖皇冠
+        // 皇冠：儲蓄率 > 50%
         if (savingsRate >= 0.5 && (currentIncome - currentExpense) > 0) {
             accCrown.classList.add('unlocked');
-            statusMsg = "汪嗚！你是省錢國王！👑";
+            unlockedCount++;
         } else {
             accCrown.classList.remove('unlocked');
         }
 
-        growthText.innerText = statusMsg;
+        // 領結：只要開始記帳
+        if (totalCount > 0) {
+            accBowtie.classList.add('unlocked');
+            unlockedCount++;
+        } else {
+            accBowtie.classList.remove('unlocked');
+        }
+
+        // E. 心情與發光效果
+        if (currentExpense > currentIncome && currentIncome > 0) {
+            petMain.innerText = "🥺";
+            growthText.innerText = "汪...主人的骨頭快花光了，要節省喔！";
+            petAura.classList.remove('glow');
+        } else {
+            petMain.innerText = (unlockedCount >= 2) ? "😎" : "🐕";
+            growthText.innerText = (unlockedCount === 3) ? "汪嗚！你是省錢國王，我好崇拜你！👑" : `汪！我已經陪你散步 ${uniqueDays} 天了！`;
+            if (unlockedCount >= 2) petAura.classList.add('glow');
+            else petAura.classList.remove('glow');
+        }
     }
 
     function addRecord() {
@@ -522,7 +574,7 @@
         expenseChart.data.datasets[0].data = catTotals;
         expenseChart.update();
 
-        // 觸發遊戲化檢查
+        // 觸發進階遊戲化檢查
         checkGrowth(incomeTotal, expenseTotal);
     }
 
