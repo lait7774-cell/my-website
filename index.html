@@ -203,8 +203,12 @@
         chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['餐飲', '交通', '購物', '其他'],
-                datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#cbd5e1'] }]
+                labels: ['支出總額'],
+                datasets: [{ data: [0], backgroundColor: ['#fbbf24'] }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
     }
@@ -216,44 +220,47 @@
         
         if(!input) return;
 
-        // 如果 apiKey 為空，模擬阿柴對話
-        if(!apiKey) {
-            status.innerText = "汪！主人沒給我鑰匙 (API Key)，我只能看不能解析喔...請先手動記帳。";
+        // 核心修正：判斷 API Key 是否存在，避免觸發 403
+        if(!apiKey || apiKey === "") {
+            status.innerText = "汪！主人沒給我鑰匙 (API Key)，我沒辦法幫你解析喔！請先用手動輸入。";
             return;
         }
 
         btn.disabled = true;
-        status.innerText = "汪！解析中...";
+        status.innerText = "汪！努力思考解析中...";
         
         try {
             const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: `請解析記帳內容「${input}」，輸出為純 JSON：{"desc": "項目", "amount": 數字, "type": "支出"或"收入"}` }] }],
+                    contents: [{ parts: [{ text: `你是一個記帳機器人。請將「${input}」解析為 JSON。例如「晚餐100元」解析為 {"desc": "晚餐", "amount": 100, "type": "支出"}。請只輸出 JSON 字串。` }] }],
                     generationConfig: { responseMimeType: "application/json" }
                 })
             });
 
-            if(resp.status === 403) {
-                status.innerText = "汪嗚！API Key 好像不對，伺服器拒絕了我 (403)。";
-                btn.disabled = false;
-                return;
+            if(!resp.ok) {
+                if(resp.status === 403) throw new Error("API_KEY_INVALID");
+                throw new Error("API_ERROR");
             }
 
             const data = await resp.json();
             const rawContent = data.candidates[0].content.parts[0].text;
-            // 嘗試提取 JSON 內容
             const jsonMatch = rawContent.match(/\{.*\}/s);
             const result = JSON.parse(jsonMatch ? jsonMatch[0] : rawContent);
             
-            document.getElementById('desc').value = result.desc || "";
-            document.getElementById('amount').value = result.amount || "";
-            document.getElementById('type').value = result.type || "支出";
-            status.innerText = "汪！解析好了，請確認內容後點擊新增！";
+            if(result.desc) document.getElementById('desc').value = result.desc;
+            if(result.amount) document.getElementById('amount').value = result.amount;
+            if(result.type) document.getElementById('type').value = result.type;
+            
+            status.innerText = "汪！解析完成了！檢查一下內容再點擊新增吧！";
         } catch(e) {
-            console.error(e);
-            status.innerText = "汪...解析出了一點錯，可以試試看手動輸入。";
+            console.error("AI 解析錯誤:", e);
+            if(e.message === "API_KEY_INVALID") {
+                status.innerText = "汪嗚！API Key 無效或被拒絕 (403)，請手動輸入喔。";
+            } else {
+                status.innerText = "汪...解析時出了點狀況，請主人手動填寫。";
+            }
         } finally {
             btn.disabled = false;
         }
@@ -269,7 +276,7 @@
         };
 
         if(!record.desc || isNaN(record.amount)) {
-            alert("汪嗚！內容跟金額都要填喔！");
+            alert("汪！內容跟金額都要填好喔！");
             return;
         }
 
@@ -279,7 +286,7 @@
         
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
-        document.getElementById('ai-status').innerText = "記好囉！主人真棒汪！";
+        document.getElementById('ai-status').innerText = "記好一筆了！主人真棒汪！";
     }
 
     function updateUI() {
@@ -296,7 +303,7 @@
             if(r.type === '收入') inc += r.amount; else exp += r.amount;
             historyDiv.innerHTML += `
                 <div class="history-item">
-                    <span>${r.date.slice(5)} ${r.desc}</span>
+                    <span>${r.date.split('-').slice(1).join('/')} ${r.desc}</span>
                     <span class="${r.type === '收入' ? 'val-income' : 'val-expense'}">${r.type === '收入' ? '+' : '-'}${r.amount}</span>
                 </div>`;
         });
@@ -305,10 +312,13 @@
         document.getElementById('total-expense').innerText = `$${exp}`;
         document.getElementById('total-balance').innerText = `$${inc - exp}`;
         
-        if(inc - exp > 1000) document.getElementById('acc-crown').classList.add('unlocked');
+        // 皇冠成就
+        const crown = document.getElementById('acc-crown');
+        if(inc - exp > 2000) crown.classList.add('unlocked');
+        else crown.classList.remove('unlocked');
         
         if(chart) {
-            chart.data.datasets[0].data = [exp, 0, 0, 0];
+            chart.data.datasets[0].data = [exp];
             chart.update();
         }
     }
