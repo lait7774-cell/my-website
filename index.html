@@ -116,7 +116,8 @@
         <div class="pet-container">
             🐕 <span id="acc-crown" class="accessory">👑</span>
         </div>
-        <div style="font-weight: bold; margin-bottom: 15px;">汪！我是阿柴 AI 記帳助手</div>
+        <div style="font-weight: bold; margin-bottom: 5px;">汪！我是阿柴 AI 記帳助手</div>
+        <div style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">(沒有 API Key 時，我會啟動「柴柴直覺」模擬解析喔！)</div>
         <div class="input-group">
             <input type="text" id="ai-input" placeholder="例如：晚餐花了 150 元">
             <button class="btn-ai" id="btn-ai" onclick="processAI()">汪！解析</button>
@@ -173,7 +174,7 @@
 </div>
 
 <script>
-    const apiKey = ""; // 此處由環境提供
+    const apiKey = ""; // 此處留空觸發模擬模式
     const STORAGE_KEY = 'smart_spend_simple_v1';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     let chart = null;
@@ -206,11 +207,20 @@
                 labels: ['支出總額'],
                 datasets: [{ data: [0], backgroundColor: ['#fbbf24'] }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
+    }
+
+    // 模擬解析功能：當 API 不可用時使用
+    function simulateAI(input) {
+        const amountMatch = input.match(/\d+/);
+        const amount = amountMatch ? parseInt(amountMatch[0]) : 0;
+        let type = "支出";
+        if (input.includes("領錢") || input.includes("薪水") || input.includes("收入")) type = "收入";
+        
+        const desc = input.replace(/\d+/, '').replace(/元|花了|收入|領了/g, '').trim() || "生活雜項";
+        
+        return { desc, amount, type };
     }
 
     async function processAI() {
@@ -220,14 +230,21 @@
         
         if(!input) return;
 
-        // 核心修正：判斷 API Key 是否存在，避免觸發 403
+        btn.disabled = true;
+        status.innerText = "汪！阿柴努力解析中...";
+
+        // 檢查金鑰，若無則啟動模擬
         if(!apiKey || apiKey === "") {
-            status.innerText = "汪！主人沒給我鑰匙 (API Key)，我沒辦法幫你解析喔！請先用手動輸入。";
+            setTimeout(() => {
+                const result = simulateAI(input);
+                document.getElementById('desc').value = result.desc;
+                document.getElementById('amount').value = result.amount;
+                document.getElementById('type').value = result.type;
+                status.innerText = "汪！主人的鑰匙還沒給，我先用「柴柴直覺」幫你解析好了！確認後請點擊新增。";
+                btn.disabled = false;
+            }, 800);
             return;
         }
-
-        btn.disabled = true;
-        status.innerText = "汪！努力思考解析中...";
         
         try {
             const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
@@ -239,10 +256,7 @@
                 })
             });
 
-            if(!resp.ok) {
-                if(resp.status === 403) throw new Error("API_KEY_INVALID");
-                throw new Error("API_ERROR");
-            }
+            if(!resp.ok) throw new Error("API_ERROR");
 
             const data = await resp.json();
             const rawContent = data.candidates[0].content.parts[0].text;
@@ -253,14 +267,12 @@
             if(result.amount) document.getElementById('amount').value = result.amount;
             if(result.type) document.getElementById('type').value = result.type;
             
-            status.innerText = "汪！解析完成了！檢查一下內容再點擊新增吧！";
+            status.innerText = "汪！AI 解析完成了！檢查一下內容再點擊新增吧！";
         } catch(e) {
-            console.error("AI 解析錯誤:", e);
-            if(e.message === "API_KEY_INVALID") {
-                status.innerText = "汪嗚！API Key 無效或被拒絕 (403)，請手動輸入喔。";
-            } else {
-                status.innerText = "汪...解析時出了點狀況，請主人手動填寫。";
-            }
+            status.innerText = "汪...AI 暫時連不上，我改用「柴柴直覺」幫你解析了！";
+            const result = simulateAI(input);
+            document.getElementById('desc').value = result.desc;
+            document.getElementById('amount').value = result.amount;
         } finally {
             btn.disabled = false;
         }
@@ -286,6 +298,7 @@
         
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
+        document.getElementById('ai-input').value = '';
         document.getElementById('ai-status').innerText = "記好一筆了！主人真棒汪！";
     }
 
@@ -312,7 +325,6 @@
         document.getElementById('total-expense').innerText = `$${exp}`;
         document.getElementById('total-balance').innerText = `$${inc - exp}`;
         
-        // 皇冠成就
         const crown = document.getElementById('acc-crown');
         if(inc - exp > 2000) crown.classList.add('unlocked');
         else crown.classList.remove('unlocked');
