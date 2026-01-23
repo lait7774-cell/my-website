@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartSpend | 萌寵 AI 收支儀表板</title>
-    <!-- 引入外部函式庫 -->
+    <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root {
-            --primary: #d97706; /* 柴犬金 */
+            --primary: #d97706;
             --secondary: #fef3c7;
-            --accent: #f472b6; /* 肉球粉 */
+            --accent: #f472b6;
             --success: #10b981;
             --danger: #ef4444;
             --bg: #fffcf2;
@@ -23,8 +23,6 @@
             margin: 0;
             padding: 20px;
             color: #451a03;
-            background-image: radial-gradient(#fbbf24 0.5px, transparent 0.5px);
-            background-size: 20px 20px;
         }
 
         .dashboard {
@@ -32,174 +30,104 @@
             margin: 0 auto;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            gap: 20px;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 30px;
-            border-radius: 24px;
-            box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.1);
-            border: 2px solid #fde68a;
-            position: relative;
-            overflow: hidden;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.1);
+            border: 1px solid #fde68a;
         }
 
         .full-width { grid-column: 1 / -1; }
 
-        /* --- 阿柴助理與成長系統樣式 --- */
         .pet-container {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 10px;
-            background: white;
+            width: 100px;
+            height: 100px;
+            background: #fff;
+            border: 3px solid var(--primary);
             border-radius: 50%;
-            border: 4px solid var(--primary);
+            margin: 0 auto 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 4rem;
+            font-size: 3rem;
+            position: relative;
         }
 
         .accessory {
             position: absolute;
-            font-size: 2.2rem;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            opacity: 0;
-            transform: scale(0.5) translateY(20px);
-            pointer-events: none;
+            font-size: 1.5rem;
+            display: none;
         }
+        #acc-crown { top: -10px; right: -5px; }
+        .unlocked { display: block !important; }
 
-        .accessory.unlocked { opacity: 1; transform: scale(1) translateY(0); }
-        #acc-sunglasses { top: 35px; left: 25px; font-size: 2.5rem; }
-        #acc-crown { top: -15px; left: 35px; transform: rotate(-15deg) scale(0.5); }
-        #acc-crown.unlocked { transform: rotate(-15deg) scale(1.1); }
-
-        /* --- AI 助理對話框 --- */
-        .ai-chat-box {
-            background: #fff;
-            border-radius: 20px;
-            border: 2px dashed var(--primary);
-            padding: 15px;
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
             margin-top: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
         }
 
-        .ai-input-area {
-            display: flex;
-            gap: 10px;
+        .summary-item {
+            text-align: center;
+            padding: 10px;
+            background: #fffbeb;
+            border-radius: 10px;
         }
 
-        .ai-input-area input {
-            flex: 1;
-            padding: 10px 15px;
-            border-radius: 30px;
+        h2 { margin: 0 0 15px 0; font-size: 1.2rem; color: var(--primary); }
+
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
+        input, select, button {
+            padding: 12px;
+            border-radius: 10px;
             border: 1px solid #ddd;
+            font-size: 1rem;
         }
 
-        .btn-ai {
-            background: var(--primary);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            border: none;
-            cursor: pointer;
-        }
+        .btn-add { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
+        .btn-ai { background: #334155; color: white; border: none; cursor: pointer; }
 
-        .btn-ai:disabled {
-            background: #cbd5e1;
-            cursor: not-allowed;
-        }
-
-        .ai-status {
-            font-size: 12px;
-            color: #b45309;
-            font-style: italic;
-            text-align: left;
-            min-height: 18px;
-            padding: 0 5px;
-        }
-
-        /* --- 樣式保持 --- */
-        .growth-status {
+        .history-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
             font-size: 0.9rem;
-            background: var(--secondary);
-            padding: 5px 15px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 5px;
-            font-weight: bold;
-            color: var(--primary);
         }
 
-        h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .val-income { color: var(--success); font-weight: bold; }
+        .val-expense { color: var(--danger); font-weight: bold; }
 
-        .type-toggle { display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; margin-bottom: 15px; }
-        .type-toggle label { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-weight: bold; transition: all 0.3s; }
-        .type-toggle input { display: none; }
-        #type-expense:checked + label { background: var(--danger); color: white; }
-        #type-income:checked + label { background: var(--success); color: white; }
-
-        .input-group { display: flex; flex-direction: column; gap: 15px; }
-        input, select { padding: 14px; border: 2px solid #fde68a; border-radius: 12px; font-size: 16px; outline: none; }
-        input:focus, select:focus { border-color: var(--primary); }
-
-        button { padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-add { background: var(--primary); color: white; box-shadow: 0 4px 0 #b45309; }
-        .btn-add:active { transform: translateY(2px); box-shadow: 0 2px 0 #b45309; }
-        
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-        .summary-item { text-align: center; padding: 15px; background: white; border-radius: 15px; border: 1px solid #fde68a; }
-        .summary-value { font-size: 1.2rem; font-weight: bold; }
-        .val-income { color: var(--success); }
-        .val-expense { color: var(--danger); }
-
-        .history-list { max-height: 300px; overflow-y: auto; margin-top: 15px; }
-        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; margin-bottom: 8px; background: #fff; border-left: 8px solid #ccc; }
-        .item-income { border-left-color: var(--success); }
-        .item-expense { border-left-color: var(--danger); }
-        .amount { font-weight: bold; }
-
-        @media (max-width: 768px) { .dashboard { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .dashboard { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
-    <!-- 阿柴 AI 成長室 -->
-    <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
-        <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <div class="pet-container">
-                    <span id="pet-main">🐕</span>
-                    <span id="acc-sunglasses" class="accessory">🕶️</span>
-                    <span id="acc-crown" class="accessory">👑</span>
-                </div>
-                <div id="growth-text" class="growth-status">汪！我是阿柴 AI 助理🐾</div>
-            </div>
-            
-            <div style="flex: 2; min-width: 300px;">
-                <div class="ai-chat-box">
-                    <div style="text-align: left; font-weight: bold; color: var(--primary);">✨ 智慧記帳：一句話就搞定！</div>
-                    <div class="ai-input-area">
-                        <input type="text" id="ai-input" placeholder="例如：今天晚餐吃拉麵 200 元...">
-                        <button class="btn-ai" id="btn-ai" onclick="processAI()">汪！解析</button>
-                    </div>
-                    <div id="ai-status" class="ai-status">等待指令中...</div>
-                </div>
-            </div>
+    <!-- 阿柴助理 -->
+    <div class="card full-width" style="text-align: center;">
+        <div class="pet-container">
+            🐕 <span id="acc-crown" class="accessory">👑</span>
+        </div>
+        <div style="font-weight: bold; margin-bottom: 15px;">汪！我是阿柴 AI 記帳助手</div>
+        <div class="input-group">
+            <input type="text" id="ai-input" placeholder="例如：晚餐花了 150 元">
+            <button class="btn-ai" onclick="processAI()">汪！解析</button>
+            <div id="ai-status" style="font-size: 0.8rem; color: #666;"></div>
         </div>
     </div>
 
-    <!-- 結餘統計區 -->
+    <!-- 統計 -->
     <div class="card full-width">
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-            <select id="year-filter" onchange="updateUI()"></select>
-            <select id="month-filter" onchange="updateUI()">
+        <div style="display: flex; gap: 10px;">
+            <select id="year-filter"></select>
+            <select id="month-filter">
                 <option value="01">1月</option><option value="02">2月</option>
                 <option value="03">3月</option><option value="04">4月</option>
                 <option value="05">5月</option><option value="06">6月</option>
@@ -209,266 +137,155 @@
             </select>
         </div>
         <div class="summary-grid">
-            <div class="summary-item"><div>總收入</div><div id="total-income" class="summary-value val-income">$0</div></div>
-            <div class="summary-item"><div>總支出</div><div id="total-expense" class="summary-value val-expense">$0</div></div>
-            <div class="summary-item"><div>結餘</div><div id="total-balance" class="summary-value val-balance">$0</div></div>
+            <div class="summary-item">收入<div id="total-income" class="val-income">$0</div></div>
+            <div class="summary-item">支出<div id="total-expense" class="val-expense">$0</div></div>
+            <div class="summary-item">結餘<div id="total-balance">$0</div></div>
         </div>
     </div>
 
-    <!-- 手動輸入區 -->
+    <!-- 新增紀錄 -->
     <div class="card">
-        <h2>➕ 手動新增</h2>
+        <h2>➕ 手動記帳</h2>
         <div class="input-group">
-            <div class="type-toggle">
-                <input type="radio" name="type" id="type-expense" value="支出" checked>
-                <label for="type-expense">💸 支出</label>
-                <input type="radio" name="type" id="type-income" value="收入">
-                <label for="type-income">💰 收入</label>
-            </div>
-            <input type="date" id="record-date">
-            <input type="text" id="desc" placeholder="項目名稱...">
-            <input type="number" id="amount" placeholder="金額">
-            <select id="category">
-                <option value="餐飲">🍱 美食餐飲</option>
-                <option value="交通">🚗 汪汪出門</option>
-                <option value="娛樂">🎮 玩耍玩具</option>
-                <option value="學習">📚 學習成長</option>
-                <option value="薪水">💵 勞動所得</option>
-                <option value="其他">✨ 其他項目</option>
+            <select id="type">
+                <option value="支出">💸 支出</option>
+                <option value="收入">💰 收入</option>
             </select>
-            <button class="btn-add" onclick="addRecord()">🐶 記一筆帳！</button>
+            <input type="date" id="date">
+            <input type="text" id="desc" placeholder="項目內容">
+            <input type="number" id="amount" placeholder="金額">
+            <button class="btn-add" onclick="addRecord()">🐶 存進骨頭盒</button>
         </div>
     </div>
 
-    <!-- 圖表區 -->
+    <!-- 圖表 -->
     <div class="card">
-        <h2>📊 支出比例</h2>
-        <div style="max-width: 250px; margin: 0 auto;">
-            <canvas id="expenseChart"></canvas>
-        </div>
+        <h2>📊 支出佔比</h2>
+        <canvas id="expenseChart" height="200"></canvas>
     </div>
 
-    <!-- 歷史紀錄 -->
+    <!-- 歷史 -->
     <div class="card full-width">
-        <h2>📜 散步足跡</h2>
+        <h2>📜 記帳歷史</h2>
         <div id="history" class="history-list"></div>
-        <button onclick="clearAll()" style="margin-top:10px; border:none; background:none; color:#999; cursor:pointer; text-decoration:underline;">清除所有資料</button>
     </div>
 </div>
 
 <script>
-    const apiKey = ""; 
-    const STORAGE_KEY = 'smartspend_data_ai_v1';
-    let records = [];
-    let expenseChart = null;
-    const categories = ['餐飲', '交通', '娛樂', '學習', '薪水', '其他'];
+    const apiKey = "";
+    const STORAGE_KEY = 'smart_spend_simple_v1';
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let chart = null;
 
-    // 確保 DOM 載入後再初始化
-    window.addEventListener('load', () => {
-        try {
-            // 讀取資料
-            records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-            
-            // 初始化日期
-            const now = new Date();
-            document.getElementById('record-date').value = now.toISOString().split('T')[0];
-            
-            // 初始化篩選器
-            initYearFilter(now.getFullYear());
-            document.getElementById('month-filter').value = String(now.getMonth() + 1).padStart(2, '0');
-            
-            // 初始化圖表
-            initChart();
-            
-            // 更新介面
-            updateUI();
-        } catch (e) {
-            console.error("初始化失敗:", e);
-            document.getElementById('ai-status').innerText = "汪！系統啟動有點小感冒，請重新整理試試。";
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        const now = new Date();
+        const yearSelect = document.getElementById('year-filter');
+        const monthSelect = document.getElementById('month-filter');
+        
+        // 填寫年份
+        for(let i=2024; i<=2026; i++) {
+            yearSelect.add(new Option(i + "年", i));
         }
+        
+        yearSelect.value = now.getFullYear();
+        monthSelect.value = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('date').value = now.toISOString().split('T')[0];
+
+        // 監聽變動
+        yearSelect.onchange = updateUI;
+        monthSelect.onchange = updateUI;
+
+        initChart();
+        updateUI();
     });
 
     function initChart() {
         const ctx = document.getElementById('expenseChart').getContext('2d');
-        expenseChart = new Chart(ctx, {
+        chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: categories,
-                datasets: [{
-                    data: new Array(6).fill(0),
-                    backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#10b981', '#cbd5e1']
-                }]
-            },
-            options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                labels: ['餐飲', '交通', '購物', '其他'],
+                datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#cbd5e1'] }]
+            }
         });
     }
 
-    function initYearFilter(defaultYear) {
-        const yearFilter = document.getElementById('year-filter');
-        yearFilter.innerHTML = '';
-        for (let y = 2030; y >= 2020; y--) { // 縮小範圍增加穩定性
-            const opt = new Option(`${y} 年`, y);
-            if (y === defaultYear) opt.selected = true;
-            yearFilter.add(opt);
-        }
-    }
-
     async function processAI() {
-        const input = document.getElementById('ai-input').value.trim();
+        const input = document.getElementById('ai-input').value;
         const status = document.getElementById('ai-status');
-        const btn = document.getElementById('btn-ai');
+        if(!input) return;
+
+        status.innerText = "汪！解析中...";
         
-        if (!input) return;
-
-        btn.disabled = true;
-        status.innerText = "汪汪！阿柴努力解析中...";
-        
-        const systemPrompt = `你是一個嚴謹的記帳資料解析器。
-        請僅輸出純 JSON 對象，不要包含任何解釋性文字。
-        
-        當前上下文：
-        - 今天的日期：${new Date().toISOString().split('T')[0]}
-        - 有效類別：餐飲, 交通, 娛樂, 學習, 薪水, 其他
-        - 有效類型：支出, 收入
-
-        JSON 格式：
-        {
-            "date": "YYYY-MM-DD",
-            "type": "支出",
-            "category": "類別名稱",
-            "desc": "具體項目名稱",
-            "amount": 數字
-        }`;
-
-        const maxRetries = 3;
-        const delays = [1000, 2000, 4000];
-        
-        for (let i = 0; i <= maxRetries; i++) {
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: input }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] },
-                        generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
-                    })
-                });
-
-                if (!response.ok) throw new Error("API 回應異常");
-
-                const result = await response.json();
-                const rawText = result.candidates[0].content.parts[0].text;
-                const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("格式錯誤");
-
-                const data = JSON.parse(jsonMatch[0]);
-                
-                // 套用至 UI
-                if (data.date) document.getElementById('record-date').value = data.date;
-                if (data.desc) document.getElementById('desc').value = data.desc;
-                if (data.amount) document.getElementById('amount').value = data.amount;
-                if (data.category && categories.includes(data.category)) {
-                    document.getElementById('category').value = data.category;
-                }
-                if (data.type === '收入') document.getElementById('type-income').checked = true;
-                else document.getElementById('type-expense').checked = true;
-
-                status.style.color = "#10b981";
-                status.innerText = `汪！解析成功：${data.desc} $${data.amount}。檢查後點擊新增！`;
-                btn.disabled = false;
-                return;
-            } catch (error) {
-                if (i === maxRetries) {
-                    status.style.color = "#ef4444";
-                    status.innerText = "汪！解析失敗...可以手動輸入試試看喔！";
-                } else {
-                    await new Promise(r => setTimeout(r, delays[i]));
-                }
-            }
+        try {
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `請解析記帳內容「${input}」，輸出為 JSON：{"desc": "項目", "amount": 數字, "type": "支出"或"收入"}` }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+            const data = await resp.json();
+            const result = JSON.parse(data.candidates[0].content.parts[0].text);
+            
+            document.getElementById('desc').value = result.desc;
+            document.getElementById('amount').value = result.amount;
+            document.getElementById('type').value = result.type || "支出";
+            status.innerText = "汪！解析好了，請點擊新增！";
+        } catch(e) {
+            status.innerText = "汪...失敗了，請手動輸入。";
         }
-        btn.disabled = false;
     }
 
     function addRecord() {
-        const date = document.getElementById('record-date').value;
-        const desc = document.getElementById('desc').value;
-        const amount = parseInt(document.getElementById('amount').value);
-        const category = document.getElementById('category').value;
-        const type = document.querySelector('input[name="type"]:checked').value;
+        const record = {
+            id: Date.now(),
+            date: document.getElementById('date').value,
+            desc: document.getElementById('desc').value,
+            amount: parseInt(document.getElementById('amount').value),
+            type: document.getElementById('type').value
+        };
 
-        if (!date || !desc || isNaN(amount)) {
-            alert("汪嗚！資料不完整喔！");
-            return;
-        }
+        if(!record.desc || isNaN(record.amount)) return alert("請填寫內容與金額！");
 
-        records.push({ id: Date.now(), date, desc, amount, category, type });
+        records.push(record);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
         updateUI();
         
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
-        document.getElementById('ai-status').innerText = "汪！記好一筆了！主人真棒！";
     }
 
     function updateUI() {
-        const year = document.getElementById('year-filter').value;
-        const month = document.getElementById('month-filter').value;
-        const prefix = `${year}-${month}`;
+        const y = document.getElementById('year-filter').value;
+        const m = document.getElementById('month-filter').value;
+        const filterStr = `${y}-${m}`;
         
+        const filtered = records.filter(r => r.date.startsWith(filterStr));
         const historyDiv = document.getElementById('history');
         historyDiv.innerHTML = '';
         
         let inc = 0, exp = 0;
-        let catTotals = new Array(6).fill(0);
-
-        const filtered = records.filter(r => r.date.startsWith(prefix))
-                               .sort((a,b) => b.date.localeCompare(a.date));
-
         filtered.forEach(r => {
-            const isInc = r.type === '收入';
-            if (isInc) inc += r.amount;
-            else {
-                exp += r.amount;
-                const idx = categories.indexOf(r.category);
-                if (idx !== -1) catTotals[idx] += r.amount;
-            }
-
-            const item = document.createElement('div');
-            item.className = `history-item ${isInc ? 'item-income' : 'item-expense'}`;
-            item.innerHTML = `
-                <div><small>${r.date}</small><br><strong>${r.category} | ${r.desc}</strong></div>
-                <div class="amount">${isInc ? '+' : '-'}$${r.amount}</div>
-            `;
-            historyDiv.appendChild(item);
+            if(r.type === '收入') inc += r.amount; else exp += r.amount;
+            historyDiv.innerHTML += `
+                <div class="history-item">
+                    <span>${r.date.slice(5)} ${r.desc}</span>
+                    <span class="${r.type === '收入' ? 'val-income' : 'val-expense'}">${r.type === '收入' ? '+' : '-'}${r.amount}</span>
+                </div>`;
         });
 
         document.getElementById('total-income').innerText = `$${inc}`;
         document.getElementById('total-expense').innerText = `$${exp}`;
         document.getElementById('total-balance').innerText = `$${inc - exp}`;
         
-        if (expenseChart) {
-            expenseChart.data.datasets[0].data = catTotals;
-            expenseChart.update();
-        }
+        if(inc - exp > 1000) document.getElementById('acc-crown').classList.add('unlocked');
         
-        checkGrowth(inc, exp);
-    }
-
-    function checkGrowth(inc, exp) {
-        const uniqueDays = new Set(records.map(r => r.date)).size;
-        const sunglass = document.getElementById('acc-sunglasses');
-        const crown = document.getElementById('acc-crown');
-        
-        if (uniqueDays >= 3) sunglass.classList.add('unlocked');
-        if (inc > 0 && (inc - exp) / inc >= 0.5) crown.classList.add('unlocked');
-    }
-
-    function clearAll() {
-        if (confirm("確定清除所有足跡嗎？")) { 
-            records = []; 
-            localStorage.removeItem(STORAGE_KEY); 
-            updateUI(); 
+        if(chart) {
+            chart.data.datasets[0].data = [exp, 0, 0, 0]; // 簡單模擬
+            chart.update();
         }
     }
 </script>
