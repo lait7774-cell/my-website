@@ -179,7 +179,7 @@
                     <div style="text-align: left; font-weight: bold; color: var(--primary);">✨ 智慧記帳：一句話就搞定！</div>
                     <div class="ai-input-area">
                         <input type="text" id="ai-input" placeholder="例如：今天晚餐吃拉麵 200 元...">
-                        <button class="btn-ai" onclick="processAI()">汪！解析</button>
+                        <button class="btn-ai" id="btn-ai" onclick="processAI()">汪！解析</button>
                     </div>
                     <div id="ai-status" class="ai-status">等待指令中...</div>
                 </div>
@@ -285,12 +285,14 @@
         }
     }
 
-    // --- AI 智慧解析邏輯 ---
+    // --- AI 智慧解析邏輯：含重試機制 ---
     async function processAI() {
         const input = document.getElementById('ai-input').value;
         const status = document.getElementById('ai-status');
+        const btn = document.getElementById('btn-ai');
         if (!input) return;
 
+        btn.disabled = true;
         status.innerText = "汪汪！正在動腦解析中...";
         
         const systemPrompt = `你是一個專業的記帳助理「阿柴」。請解析使用者的句子並轉換為 JSON 格式。
@@ -299,7 +301,11 @@
         類型必須是：支出, 收入 之一。
         輸出格式範例：{"date": "YYYY-MM-DD", "type": "支出", "category": "餐飲", "desc": "拉麵", "amount": 200}`;
 
-        try {
+        // 指數對退重試機制
+        const maxRetries = 5;
+        const delays = [1000, 2000, 4000, 8000, 16000];
+        
+        const callGemini = async () => {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -309,26 +315,41 @@
                     generationConfig: { responseMimeType: "application/json" }
                 })
             });
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+            return await response.json();
+        };
 
-            if (!response.ok) throw new Error("API 請求失敗");
-            
-            const result = await response.json();
-            const data = JSON.parse(result.candidates[0].content.parts[0].text);
-            
-            // 自動帶入解析結果
-            document.getElementById('record-date').value = data.date;
-            document.getElementById('desc').value = data.desc;
-            document.getElementById('amount').value = data.amount;
-            document.getElementById('category').value = data.category;
-            if (data.type === '收入') document.getElementById('type-income').checked = true;
-            else document.getElementById('type-expense').checked = true;
+        let lastError = null;
+        for (let i = 0; i <= maxRetries; i++) {
+            try {
+                const result = await callGemini();
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                
+                // 自動帶入解析結果
+                document.getElementById('record-date').value = data.date;
+                document.getElementById('desc').value = data.desc;
+                document.getElementById('amount').value = data.amount;
+                document.getElementById('category').value = data.category;
+                if (data.type === '收入') document.getElementById('type-income').checked = true;
+                else document.getElementById('type-expense').checked = true;
 
-            status.innerText = `汪！解析成功：${data.desc} $${data.amount}。請確認後點擊新增！`;
-            document.getElementById('ai-input').value = "";
-        } catch (error) {
-            status.innerText = "汪嗚...解析失敗，請再說清楚一點。";
-            console.error(error);
+                status.innerText = `汪！解析成功：${data.desc} $${data.amount}。請確認後點擊新增！`;
+                document.getElementById('ai-input').value = "";
+                btn.disabled = false;
+                return; // 成功後退出循環
+            } catch (error) {
+                lastError = error;
+                if (i < maxRetries) {
+                    status.innerText = `汪...嗅覺失靈，第 ${i+1} 次重試中...`;
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
         }
+
+        // 所有重試均失敗
+        status.innerText = "汪嗚...解析失敗，請再說清楚一點。";
+        console.error("AI 最終處理失敗:", lastError);
+        btn.disabled = false;
     }
 
     // --- 基礎記帳功能 ---
