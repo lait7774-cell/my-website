@@ -90,7 +90,6 @@
             transition: all 0.5s;
         }
 
-        /* 大師級發光效果 */
         .pet-stage.master-glow {
             box-shadow: 0 0 30px #f1c40f, inset 0 0 15px #f39c12;
             animation: pulse-glow 2s infinite;
@@ -179,7 +178,6 @@
         }
 
         .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(230, 126, 34, 0.4); }
-        .btn-main:active { transform: translateY(0); }
 
         .btn-outline {
             background: white;
@@ -209,6 +207,12 @@
             justify-content: space-between;
             align-items: center;
             border: 1px solid #f1f3f5;
+            transition: transform 0.2s ease;
+        }
+        
+        .history-item:hover {
+            transform: scale(1.01);
+            border-color: var(--primary);
         }
 
         .history-tag {
@@ -223,6 +227,33 @@
         .tag-exp { background: #fff5f5; color: var(--danger); }
         .tag-inc { background: #ebfbee; color: var(--success); }
 
+        /* 刪除按鈕樣式 */
+        .history-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-delete {
+            background: #f8f9fa;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 8px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-delete:hover {
+            color: var(--danger);
+            background: #fff5f5;
+            transform: rotate(10deg);
+        }
+
         @media (max-width: 850px) {
             .col-12, .col-8, .col-4 { grid-column: span 12; }
         }
@@ -231,7 +262,7 @@
 <body>
 
 <div class="dashboard">
-    <!-- 1. 豪華標題與阿柴 (含等級系統) -->
+    <!-- 1. 豪華標題與阿柴 -->
     <div class="card col-12 header-card">
         <div class="pet-stage" id="pet-stage">
             <div class="level-badge" id="lv-badge">Lv.1 新手柴</div>
@@ -274,7 +305,7 @@
 
     <!-- 3. 新增紀錄 -->
     <div class="card col-4">
-        <h2 style="margin: 0 0 20px 0; font-size: 1.2rem;">✒️新增紀錄</h2>
+        <h2 style="margin: 0 0 20px 0; font-size: 1.2rem;">✒️ 新增紀錄</h2>
         <div class="input-group">
             <select id="type">
                 <option value="支出">💸 支出肉肉</option>
@@ -369,11 +400,24 @@
         if(!desc || isNaN(amount)) return alert("汪！主人的資料還沒填齊喔！");
 
         records.push({ id: Date.now(), date, desc, amount, category, type });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        saveData();
         
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
         updateUI();
+    }
+
+    // --- 單筆刪除功能 ---
+    function deleteRecord(id) {
+        if(confirm("汪！真的要把這筆足跡擦掉嗎？")) {
+            records = records.filter(r => r.id !== id);
+            saveData();
+            updateUI();
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     }
 
     function updateUI() {
@@ -402,8 +446,11 @@
                         <div style="font-weight: 700;">${r.desc}</div>
                         <div style="font-size: 0.75rem; color: #adb5bd;">${r.date}</div>
                     </div>
-                    <div class="stat-value ${r.type==='收入'?'val-inc':'val-exp'}">
-                        ${r.type==='收入'?'+':'-'}$${r.amount}
+                    <div class="history-right">
+                        <div class="stat-value" style="color: ${r.type==='收入'?'var(--success)':'var(--danger)'}">
+                            ${r.type==='收入'?'+':'-'}$${r.amount}
+                        </div>
+                        <button class="btn-delete" onclick="deleteRecord(${r.id})" title="刪除紀錄">🗑️</button>
                     </div>
                 </div>
             `;
@@ -429,13 +476,14 @@
         const badge = document.getElementById('lv-badge');
         const balance = inc - exp;
 
-        // --- 1. 配件與心情邏輯 ---
+        // 配件邏輯
         if(balance > 5000) crown.classList.add('unlocked');
         else crown.classList.remove('unlocked');
 
         if(records.length >= 5) sun.classList.add('unlocked');
         else sun.classList.remove('unlocked');
 
+        // 心情邏輯
         if(balance < 0) {
             document.getElementById('pet-main').innerText = "🥺";
             text.innerText = "汪...骨頭透支了，我們要節約一點喔！";
@@ -444,7 +492,7 @@
             text.innerText = "汪！每一分錢錢都有阿柴幫你守護！✨";
         }
 
-        // --- 2. 等級進化邏輯 ---
+        // 等級進化邏輯
         const totalCount = records.length;
         let lv = 1, lvName = "新手柴";
 
@@ -463,40 +511,28 @@
         }
 
         badge.innerText = `Lv.${lv} ${lvName}`;
-        
-        // 特殊提示
         if(lv === 4) text.innerText = "汪！主人已經成為理財大師，阿柴覺得好耀眼！✨👑";
     }
 
     function exportData() {
         if(records.length === 0) return alert("汪！目前沒有任何紀錄可以匯出喔！");
-
-        // 建立 CSV 標題
         let csvContent = "日期,類型,類別,項目名稱,金額\n";
-        
-        // 排序紀錄 (由舊到新) 並加入內容
         const sortedRecords = [...records].sort((a,b) => a.date.localeCompare(b.date));
         sortedRecords.forEach(r => {
             csvContent += `${r.date},${r.type},${r.category},${r.desc},${r.amount}\n`;
         });
-
-        // 處理中文字碼 (加入 BOM)
         const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-        
-        // 觸發下載
         const link = document.createElement("a");
         link.setAttribute("href", url);
         link.setAttribute("download", `阿柴帳本匯出_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
     }
 
     function clearAll() {
         if(confirm("汪！確定要刪除所有紀錄嗎？")) {
             records = [];
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            saveData();
             updateUI();
         }
     }
