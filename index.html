@@ -105,6 +105,13 @@
             padding: 10px 20px;
             border-radius: 30px;
             font-size: 14px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-ai:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
         }
 
         .ai-status {
@@ -113,6 +120,7 @@
             font-style: italic;
             text-align: left;
             min-height: 18px;
+            padding: 0 5px;
         }
 
         /* --- 原有樣式保持 --- */
@@ -127,7 +135,6 @@
             color: var(--primary);
         }
 
-        h1 { margin: 10px 0; color: var(--primary); text-align: center; }
         h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
 
         .type-toggle { display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; margin-bottom: 15px; }
@@ -285,23 +292,36 @@
         }
     }
 
-    // --- AI 智慧解析邏輯：含重試機制 ---
+    // --- AI 智慧解析邏輯：強化穩定性 ---
     async function processAI() {
-        const input = document.getElementById('ai-input').value;
+        const input = document.getElementById('ai-input').value.trim();
         const status = document.getElementById('ai-status');
         const btn = document.getElementById('btn-ai');
+        
         if (!input) return;
 
         btn.disabled = true;
-        status.innerText = "汪汪！正在動腦解析中...";
+        status.innerText = "汪汪！阿柴努力解析中...";
         
-        const systemPrompt = `你是一個專業的記帳助理「阿柴」。請解析使用者的句子並轉換為 JSON 格式。
-        今天的日期是 ${new Date().toISOString().split('T')[0]}。
-        類別必須是：餐飲, 交通, 娛樂, 學習, 薪水, 其他 之一。
-        類型必須是：支出, 收入 之一。
-        輸出格式範例：{"date": "YYYY-MM-DD", "type": "支出", "category": "餐飲", "desc": "拉麵", "amount": 200}`;
+        const systemPrompt = `你是一個嚴謹的記帳資料解析器。
+        請僅輸出純 JSON 對象，不要包含任何 Markdown 標記或解釋性文字。
+        
+        當前上下文：
+        - 今天的日期：${new Date().toISOString().split('T')[0]}
+        - 有效類別：餐飲, 交通, 娛樂, 學習, 薪水, 其他
+        - 有效類型：支出, 收入
 
-        // 指數對退重試機制
+        JSON 格式必須嚴格如下：
+        {
+            "date": "YYYY-MM-DD",
+            "type": "支出" | "收入",
+            "category": "類別名稱",
+            "desc": "具體項目名稱",
+            "amount": 數字
+        }
+        
+        注意：如果用戶只說了類別沒說項目，desc 請填寫類別名稱。`;
+
         const maxRetries = 5;
         const delays = [1000, 2000, 4000, 8000, 16000];
         
@@ -312,43 +332,55 @@
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: input }] }],
                     systemInstruction: { parts: [{ text: systemPrompt }] },
-                    generationConfig: { responseMimeType: "application/json" }
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        temperature: 0.1 // 降低隨機性，增加穩定性
+                    }
                 })
             });
             if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
             return await response.json();
         };
 
-        let lastError = null;
         for (let i = 0; i <= maxRetries; i++) {
             try {
                 const result = await callGemini();
-                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                let rawText = result.candidates[0].content.parts[0].text;
                 
-                // 自動帶入解析結果
-                document.getElementById('record-date').value = data.date;
-                document.getElementById('desc').value = data.desc;
-                document.getElementById('amount').value = data.amount;
-                document.getElementById('category').value = data.category;
+                // 強制提取 JSON 部分 (防止 AI 回傳包含 ```json ... ```)
+                const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("無效的 JSON 格式");
+                
+                const data = JSON.parse(jsonMatch[0]);
+                
+                // 驗證並套用資料
+                if (data.date) document.getElementById('record-date').value = data.date;
+                if (data.desc) document.getElementById('desc').value = data.desc;
+                if (data.amount) document.getElementById('amount').value = data.amount;
+                if (data.category && categories.includes(data.category)) {
+                    document.getElementById('category').value = data.category;
+                }
+                
                 if (data.type === '收入') document.getElementById('type-income').checked = true;
                 else document.getElementById('type-expense').checked = true;
 
-                status.innerText = `汪！解析成功：${data.desc} $${data.amount}。請確認後點擊新增！`;
+                status.style.color = "#10b981";
+                status.innerText = `汪！解析成功：${data.desc} $${data.amount}。檢查後點擊新增！`;
                 document.getElementById('ai-input').value = "";
                 btn.disabled = false;
-                return; // 成功後退出循環
+                return;
             } catch (error) {
-                lastError = error;
+                console.warn(`第 ${i+1} 次解析出錯:`, error);
                 if (i < maxRetries) {
-                    status.innerText = `汪...嗅覺失靈，第 ${i+1} 次重試中...`;
+                    status.style.color = "#b45309";
+                    status.innerText = `汪嗚...聞不太出來，正在第 ${i+1} 次努力嘗試...`;
                     await new Promise(resolve => setTimeout(resolve, delays[i]));
                 }
             }
         }
 
-        // 所有重試均失敗
-        status.innerText = "汪嗚...解析失敗，請再說清楚一點。";
-        console.error("AI 最終處理失敗:", lastError);
+        status.style.color = "#ef4444";
+        status.innerText = "汪！解析失敗...可以試試「今天買午餐 100 元」這種說法喔！";
         btn.disabled = false;
     }
 
@@ -360,16 +392,18 @@
         const category = document.getElementById('category').value;
         const type = document.querySelector('input[name="type"]:checked').value;
 
-        if (!date || !desc || isNaN(amount)) return alert("資料不完整！");
+        if (!date || !desc || isNaN(amount)) return alert("汪嗚！資料不完整，阿柴不能幫你記喔！");
 
         records.push({ id: Date.now(), date, desc, amount, category, type });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
         updateUI();
         
-        // 清空輸入
+        // 重置狀態
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
-        document.getElementById('ai-status').innerText = "記帳成功！汪！";
+        const status = document.getElementById('ai-status');
+        status.style.color = "#b45309";
+        status.innerText = "汪！記好一筆了！主人真棒！";
     }
 
     function updateUI() {
@@ -385,6 +419,10 @@
 
         const filtered = records.filter(r => r.date.startsWith(prefix))
                                .sort((a,b) => b.date.localeCompare(a.date));
+
+        if (filtered.length === 0) {
+            historyDiv.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">這裡還空空的，快去記帳吧！🐾</div>';
+        }
 
         filtered.forEach(r => {
             const isInc = r.type === '收入';
@@ -426,7 +464,11 @@
     }
 
     function clearAll() {
-        if (confirm("確定清除？")) { records = []; localStorage.removeItem(STORAGE_KEY); updateUI(); }
+        if (confirm("確定清除所有足跡嗎？阿柴會很難過喔...")) { 
+            records = []; 
+            localStorage.removeItem(STORAGE_KEY); 
+            updateUI(); 
+        }
     }
 </script>
 </body>
