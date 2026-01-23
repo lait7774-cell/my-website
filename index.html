@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartSpend | 萌寵收支儀表板 (2000-2100 版)</title>
+    <title>SmartSpend | 萌寵 AI 收支儀表板</title>
     <!-- 引入外部函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -47,218 +47,169 @@
 
         .full-width { grid-column: 1 / -1; }
 
-        h1 { 
-            margin-top: 0; 
-            color: var(--primary); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-            text-align: center;
-        }
-
-        h2 { 
-            margin-top: 0; 
-            color: var(--primary); 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-        }
-
-        .type-toggle {
+        /* --- 阿柴助理與成長系統樣式 --- */
+        .pet-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 10px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid var(--primary);
             display: flex;
-            background: #f1f5f9;
-            padding: 5px;
-            border-radius: 12px;
-            margin-bottom: 15px;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
         }
 
-        .type-toggle label {
+        .accessory {
+            position: absolute;
+            font-size: 2.2rem;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: scale(0.5) translateY(20px);
+        }
+
+        .accessory.unlocked { opacity: 1; transform: scale(1) translateY(0); }
+        #acc-sunglasses { top: 35px; left: 25px; font-size: 2.5rem; }
+        #acc-crown { top: -15px; left: 35px; transform: rotate(-15deg) scale(0.5); }
+        #acc-crown.unlocked { transform: rotate(-15deg) scale(1.1); }
+
+        /* --- AI 助理對話框 --- */
+        .ai-chat-box {
+            background: #fff;
+            border-radius: 20px;
+            border: 2px dashed var(--primary);
+            padding: 15px;
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ai-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-input-area input {
             flex: 1;
-            text-align: center;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 8px;
-            font-weight: bold;
-            transition: all 0.3s;
+            padding: 10px 15px;
+            border-radius: 30px;
+            border: 1px solid #ddd;
         }
 
+        .btn-ai {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+
+        .ai-status {
+            font-size: 12px;
+            color: #b45309;
+            font-style: italic;
+            text-align: left;
+            min-height: 18px;
+        }
+
+        /* --- 原有樣式保持 --- */
+        .growth-status {
+            font-size: 0.9rem;
+            background: var(--secondary);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 5px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        h1 { margin: 10px 0; color: var(--primary); text-align: center; }
+        h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+
+        .type-toggle { display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; margin-bottom: 15px; }
+        .type-toggle label { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-weight: bold; transition: all 0.3s; }
         .type-toggle input { display: none; }
         #type-expense:checked + label { background: var(--danger); color: white; }
         #type-income:checked + label { background: var(--success); color: white; }
 
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+        .input-group { display: flex; flex-direction: column; gap: 15px; }
+        input, select { padding: 14px; border: 2px solid #fde68a; border-radius: 12px; font-size: 16px; outline: none; }
+        input:focus, select:focus { border-color: var(--primary); }
 
-        input, select {
-            padding: 14px;
-            border: 2px solid #fde68a;
-            border-radius: 12px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--primary);
-        }
-
-        button {
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
+        button { padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-add { background: var(--primary); color: white; box-shadow: 0 4px 0 #b45309; }
         .btn-add:active { transform: translateY(2px); box-shadow: 0 2px 0 #b45309; }
         
-        .btn-export { background: #64748b; color: white; margin-top: 15px; }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .summary-item {
-            text-align: center;
-            padding: 15px;
-            background: white;
-            border-radius: 15px;
-            border: 1px solid #fde68a;
-        }
-
-        .summary-label { font-size: 12px; color: #64748b; margin-bottom: 5px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .summary-item { text-align: center; padding: 15px; background: white; border-radius: 15px; border: 1px solid #fde68a; }
         .summary-value { font-size: 1.2rem; font-weight: bold; }
         .val-income { color: var(--success); }
         .val-expense { color: var(--danger); }
-        .val-balance { color: var(--primary); }
 
-        .filter-container {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: #fffbeb;
-            padding: 10px 15px;
-            border-radius: 15px;
-        }
-
-        .filter-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .history-list {
-            max-height: 350px;
-            overflow-y: auto;
-            margin-top: 15px;
-            padding-right: 5px;
-        }
-
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            background: #fff;
-            border-left: 8px solid #ccc;
-        }
-
+        .history-list { max-height: 300px; overflow-y: auto; margin-top: 15px; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; margin-bottom: 8px; background: #fff; border-left: 8px solid #ccc; }
         .item-income { border-left-color: var(--success); }
         .item-expense { border-left-color: var(--danger); }
+        .amount { font-weight: bold; }
 
-        .item-info { display: flex; flex-direction: column; }
-        .item-date { font-size: 11px; color: #94a3b8; }
-
-        .amount { font-weight: bold; font-size: 1.1rem; }
-        .amt-income { color: var(--success); }
-        .amt-expense { color: var(--danger); }
-
-        .dog-badge {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            font-size: 4rem;
-            opacity: 0.1;
-            pointer-events: none;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard { grid-template-columns: 1fr; }
-            .summary-grid { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 768px) { .dashboard { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
+    <!-- 阿柴 AI 成長室 -->
     <div class="card full-width" style="text-align: center; background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);">
-        <span style="font-size: 3rem;">🐕</span>
-        <h1>SmartSpend 萌寵記帳儀表板</h1>
-        <p>汪！從 2000 到 2100 年，我都陪你一起記帳！🐾</p>
+        <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <div class="pet-container">
+                    <span id="pet-main">🐕</span>
+                    <span id="acc-sunglasses" class="accessory">🕶️</span>
+                    <span id="acc-crown" class="accessory">👑</span>
+                </div>
+                <div id="growth-text" class="growth-status">汪！我是阿柴 AI 助理🐾</div>
+            </div>
+            
+            <div style="flex: 2; min-width: 300px;">
+                <div class="ai-chat-box">
+                    <div style="text-align: left; font-weight: bold; color: var(--primary);">✨ 智慧記帳：一句話就搞定！</div>
+                    <div class="ai-input-area">
+                        <input type="text" id="ai-input" placeholder="例如：今天晚餐吃拉麵 200 元...">
+                        <button class="btn-ai" onclick="processAI()">汪！解析</button>
+                    </div>
+                    <div id="ai-status" class="ai-status">等待指令中...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- 結餘統計區與年月篩選 -->
+    <!-- 結餘統計區 -->
     <div class="card full-width">
-        <div class="filter-container">
-            <div class="filter-item">
-                <label for="year-filter">📅 選擇年份：</label>
-                <select id="year-filter" onchange="updateUI()"></select>
-            </div>
-            <div class="filter-item">
-                <label for="month-filter">月份：</label>
-                <select id="month-filter" onchange="updateUI()">
-                    <option value="01">1月</option>
-                    <option value="02">2月</option>
-                    <option value="03">3月</option>
-                    <option value="04">4月</option>
-                    <option value="05">5月</option>
-                    <option value="06">6月</option>
-                    <option value="07">7月</option>
-                    <option value="08">8月</option>
-                    <option value="09">9月</option>
-                    <option value="10">10月</option>
-                    <option value="11">11月</option>
-                    <option value="12">12月</option>
-                </select>
-            </div>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <select id="year-filter" onchange="updateUI()"></select>
+            <select id="month-filter" onchange="updateUI()">
+                <option value="01">1月</option><option value="02">2月</option>
+                <option value="03">3月</option><option value="04">4月</option>
+                <option value="05">5月</option><option value="06">6月</option>
+                <option value="07">7月</option><option value="08">8月</option>
+                <option value="09">9月</option><option value="10">10月</option>
+                <option value="11">11月</option><option value="12">12月</option>
+            </select>
         </div>
         <div class="summary-grid">
-            <div class="summary-item">
-                <div class="summary-label">該月總收入 💰</div>
-                <div id="total-income" class="summary-value val-income">$0</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">該月總支出 💸</div>
-                <div id="total-expense" class="summary-value val-expense">$0</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">該月結餘 🦴</div>
-                <div id="total-balance" class="summary-value val-balance">$0</div>
-            </div>
+            <div class="summary-item"><div>總收入</div><div id="total-income" class="summary-value val-income">$0</div></div>
+            <div class="summary-item"><div>總支出</div><div id="total-expense" class="summary-value val-expense">$0</div></div>
+            <div class="summary-item"><div>結餘</div><div id="total-balance" class="summary-value val-balance">$0</div></div>
         </div>
     </div>
 
-    <!-- 輸入區 -->
+    <!-- 手動輸入區 -->
     <div class="card">
-        <div class="dog-badge">🦴</div>
-        <h2>➕ 新增紀錄</h2>
+        <h2>➕ 手動新增</h2>
         <div class="input-group">
             <div class="type-toggle">
                 <input type="radio" name="type" id="type-expense" value="支出" checked>
@@ -267,8 +218,8 @@
                 <label for="type-income">💰 收入</label>
             </div>
             <input type="date" id="record-date">
-            <input type="text" id="desc" placeholder="項目的名稱...">
-            <input type="number" id="amount" placeholder="金額 (骨頭)">
+            <input type="text" id="desc" placeholder="項目名稱...">
+            <input type="number" id="amount" placeholder="金額">
             <select id="category">
                 <option value="餐飲">🍱 美食餐飲</option>
                 <option value="交通">🚗 汪汪出門</option>
@@ -281,189 +232,181 @@
         </div>
     </div>
 
-    <!-- 圖表分析區 -->
+    <!-- 圖表區 -->
     <div class="card">
-        <div class="dog-badge">🎾</div>
-        <h2>📊 類別支出比例</h2>
-        <div style="max-width: 280px; margin: 0 auto;">
+        <h2>📊 支出比例</h2>
+        <div style="max-width: 250px; margin: 0 auto;">
             <canvas id="expenseChart"></canvas>
         </div>
     </div>
 
-    <!-- 歷史紀錄區 -->
+    <!-- 歷史紀錄 -->
     <div class="card full-width">
-        <div class="dog-badge">🐾</div>
-        <h2>📜 散步足跡 (本地消費紀錄)</h2>
+        <h2>📜 散步足跡</h2>
         <div id="history" class="history-list"></div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn-export" onclick="exportCSV()">📥 匯出完整報表</button>
-            <button onclick="clearAll()" style="background:none; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; text-decoration: underline;">清除所有資料</button>
-        </div>
+        <button onclick="clearAll()" style="margin-top:10px; border:none; background:none; color:#999; cursor:pointer; text-decoration:underline;">清除所有資料</button>
     </div>
 </div>
 
 <script>
-    // --- 1. 資料庫初始化 ---
-    const STORAGE_KEY = 'smartspend_data_v8';
+    const apiKey = ""; // API Key 會由環境自動注入
+    const STORAGE_KEY = 'smartspend_data_ai_v1';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
-    // --- 2. Chart.js 初始化 ---
-    const ctx = document.getElementById('expenseChart').getContext('2d');
+    // --- 圖表初始化 ---
     const categories = ['餐飲', '交通', '娛樂', '學習', '薪水', '其他'];
+    const ctx = document.getElementById('expenseChart').getContext('2d');
     const expenseChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: categories,
             datasets: [{
-                data: new Array(categories.length).fill(0),
-                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#10b981', '#cbd5e1'],
-                hoverOffset: 15,
-                borderRadius: 5
+                data: new Array(6).fill(0),
+                backgroundColor: ['#fbbf24', '#60a5fa', '#f472b6', '#34d399', '#10b981', '#cbd5e1']
             }]
         },
-        options: {
-            cutout: '65%',
-            plugins: { 
-                legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: 'bold' } } } 
-            }
-        }
+        options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
     });
 
     window.onload = () => {
         const now = new Date();
         document.getElementById('record-date').value = now.toISOString().split('T')[0];
-        
-        // 核心修改：初始化選單顯示 2000-2100
         initYearFilter(now.getFullYear());
         document.getElementById('month-filter').value = String(now.getMonth() + 1).padStart(2, '0');
-        
         updateUI();
     };
 
-    // --- 3. 核心功能：2000-2100 年份處理 ---
     function initYearFilter(defaultYear) {
         const yearFilter = document.getElementById('year-filter');
-        yearFilter.innerHTML = '';
-        
-        // 生成 2100 到 2000 的選項 (新到舊)
         for (let y = 2100; y >= 2000; y--) {
-            const opt = document.createElement('option');
-            opt.value = y;
-            opt.textContent = `${y} 年`;
+            const opt = new Option(`${y} 年`, y);
             if (y === defaultYear) opt.selected = true;
-            yearFilter.appendChild(opt);
+            yearFilter.add(opt);
         }
     }
 
+    // --- AI 智慧解析邏輯 ---
+    async function processAI() {
+        const input = document.getElementById('ai-input').value;
+        const status = document.getElementById('ai-status');
+        if (!input) return;
+
+        status.innerText = "汪汪！正在動腦解析中...";
+        
+        const systemPrompt = `你是一個專業的記帳助理「阿柴」。請解析使用者的句子並轉換為 JSON 格式。
+        今天的日期是 ${new Date().toISOString().split('T')[0]}。
+        類別必須是：餐飲, 交通, 娛樂, 學習, 薪水, 其他 之一。
+        類型必須是：支出, 收入 之一。
+        輸出格式範例：{"date": "YYYY-MM-DD", "type": "支出", "category": "餐飲", "desc": "拉麵", "amount": 200}`;
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: input }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+
+            if (!response.ok) throw new Error("API 請求失敗");
+            
+            const result = await response.json();
+            const data = JSON.parse(result.candidates[0].content.parts[0].text);
+            
+            // 自動帶入解析結果
+            document.getElementById('record-date').value = data.date;
+            document.getElementById('desc').value = data.desc;
+            document.getElementById('amount').value = data.amount;
+            document.getElementById('category').value = data.category;
+            if (data.type === '收入') document.getElementById('type-income').checked = true;
+            else document.getElementById('type-expense').checked = true;
+
+            status.innerText = `汪！解析成功：${data.desc} $${data.amount}。請確認後點擊新增！`;
+            document.getElementById('ai-input').value = "";
+        } catch (error) {
+            status.innerText = "汪嗚...解析失敗，請再說清楚一點。";
+            console.error(error);
+        }
+    }
+
+    // --- 基礎記帳功能 ---
     function addRecord() {
-        const dateInput = document.getElementById('record-date').value;
+        const date = document.getElementById('record-date').value;
         const desc = document.getElementById('desc').value;
         const amount = parseInt(document.getElementById('amount').value);
         const category = document.getElementById('category').value;
         const type = document.querySelector('input[name="type"]:checked').value;
 
-        if (!dateInput || !desc || isNaN(amount)) {
-            alert("汪！日期、項目與金額缺一不可喔！");
-            return;
-        }
+        if (!date || !desc || isNaN(amount)) return alert("資料不完整！");
 
-        const newRecord = {
-            id: Date.now(),
-            date: dateInput,
-            desc,
-            amount,
-            category,
-            type
-        };
-
-        records.push(newRecord);
+        records.push({ id: Date.now(), date, desc, amount, category, type });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-        
-        const recordYear = new Date(dateInput).getFullYear();
-        const recordMonth = dateInput.split('-')[1];
-        
-        // 跳轉到該筆資料所在的年月
-        document.getElementById('year-filter').value = recordYear;
-        document.getElementById('month-filter').value = recordMonth;
-        
         updateUI();
-
+        
+        // 清空輸入
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
+        document.getElementById('ai-status').innerText = "記帳成功！汪！";
     }
 
     function updateUI() {
-        const historyDiv = document.getElementById('history');
-        const selectedYear = document.getElementById('year-filter').value;
-        const selectedMonth = document.getElementById('month-filter').value;
-        const prefix = `${selectedYear}-${selectedMonth}`;
+        const year = document.getElementById('year-filter').value;
+        const month = document.getElementById('month-filter').value;
+        const prefix = `${year}-${month}`;
         
+        const historyDiv = document.getElementById('history');
         historyDiv.innerHTML = '';
-        let incomeTotal = 0, expenseTotal = 0;
-        let catTotals = new Array(categories.length).fill(0);
+        
+        let inc = 0, exp = 0;
+        let catTotals = new Array(6).fill(0);
 
-        const filtered = records.filter(r => r.date.startsWith(prefix));
+        const filtered = records.filter(r => r.date.startsWith(prefix))
+                               .sort((a,b) => b.date.localeCompare(a.date));
 
-        if (filtered.length > 0) {
-            const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
-            
-            sorted.forEach(item => {
-                const isInc = item.type === '收入';
-                if (isInc) incomeTotal += item.amount;
-                else expenseTotal += item.amount;
+        filtered.forEach(r => {
+            const isInc = r.type === '收入';
+            if (isInc) inc += r.amount;
+            else {
+                exp += r.amount;
+                const idx = categories.indexOf(r.category);
+                if (idx !== -1) catTotals[idx] += r.amount;
+            }
 
-                const div = document.createElement('div');
-                div.className = `history-item ${isInc ? 'item-income' : 'item-expense'}`;
-                div.innerHTML = `
-                    <span class="item-info">
-                        <span class="item-date">${item.date}</span>
-                        <strong>🐾 [${item.type}] ${item.category}</strong>
-                        <small style="color:#64748b">${item.desc}</small>
-                    </span>
-                    <span class="amount ${isInc ? 'amt-income' : 'amt-expense'}">
-                        ${isInc ? '+' : '-'}$${item.amount}
-                    </span>
-                `;
-                historyDiv.appendChild(div);
+            const item = document.createElement('div');
+            item.className = `history-item ${isInc ? 'item-income' : 'item-expense'}`;
+            item.innerHTML = `
+                <div><small>${r.date}</small><br><strong>${r.category} | ${r.desc}</strong></div>
+                <div class="amount">${isInc ? '+' : '-'}$${r.amount}</div>
+            `;
+            historyDiv.appendChild(item);
+        });
 
-                if (!isInc) {
-                    const idx = categories.indexOf(item.category);
-                    if (idx !== -1) catTotals[idx] += item.amount;
-                }
-            });
-        } else {
-            historyDiv.innerHTML = `<p style="text-align: center; color: #94a3b8; padding: 20px;">汪！${selectedYear}年${selectedMonth}月 還沒有記帳紀錄喔。</p>`;
-        }
-
-        document.getElementById('total-income').innerText = `$${incomeTotal}`;
-        document.getElementById('total-expense').innerText = `$${expenseTotal}`;
-        document.getElementById('total-balance').innerText = `$${incomeTotal - expenseTotal}`;
-
+        document.getElementById('total-income').innerText = `$${inc}`;
+        document.getElementById('total-expense').innerText = `$${exp}`;
+        document.getElementById('total-balance').innerText = `$${inc - exp}`;
+        
         expenseChart.data.datasets[0].data = catTotals;
         expenseChart.update();
+        
+        checkGrowth(inc, exp);
     }
 
-    function exportCSV() {
-        if (records.length === 0) return alert("汪！沒有骨頭可以匯出。");
-        let csv = "日期,類型,類別,項目,金額\n";
-        records.sort((a,b) => a.date.localeCompare(b.date)).forEach(r => {
-            csv += `${r.date},${r.type},${r.category},${r.desc},${r.amount}\n`;
-        });
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `SmartSpend_我的記帳本.csv`;
-        link.click();
+    function checkGrowth(inc, exp) {
+        const uniqueDays = new Set(records.map(r => r.date)).size;
+        const savingsRate = inc > 0 ? (inc - exp) / inc : 0;
+        
+        const sunglass = document.getElementById('acc-sunglasses');
+        const crown = document.getElementById('acc-crown');
+        
+        if (uniqueDays >= 3) sunglass.classList.add('unlocked');
+        if (savingsRate >= 0.5 && inc > 0) crown.classList.add('unlocked');
     }
 
     function clearAll() {
-        if (confirm("汪！確定要埋掉所有的紀錄嗎？（清除後無法復原）")) {
-            records = [];
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-            updateUI();
-        }
+        if (confirm("確定清除？")) { records = []; localStorage.removeItem(STORAGE_KEY); updateUI(); }
     }
 </script>
-
 </body>
 </html>
