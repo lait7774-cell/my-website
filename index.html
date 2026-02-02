@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartSpend | 萌寵極簡豪華版</title>
+    <title>SmartSpend | 萌寵連續登入豪華版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #e67e22; /* 更暖的橘 */
+            --primary: #e67e22;
             --secondary: #fff9db;
             --accent: #ff8787;
             --success: #51cf66;
@@ -60,7 +60,6 @@
         .col-8 { grid-column: span 8; }
         .col-4 { grid-column: span 4; }
 
-        /* --- 頂部裝飾 --- */
         .header-card {
             text-align: center;
             background: linear-gradient(45deg, #f0932b, #ed4c67);
@@ -116,18 +115,37 @@
             z-index: 10;
         }
 
+        /* 連續登入火苗標籤 */
+        .streak-info {
+            position: absolute;
+            bottom: -5px;
+            left: -10px;
+            background: #fff;
+            color: #f76707;
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 2px solid #ffd8a8;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
         .accessory {
             position: absolute;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             opacity: 0;
             transform: scale(0);
+            pointer-events: none;
         }
 
         .accessory.unlocked { opacity: 1; transform: scale(1); }
         #acc-crown { top: -20px; left: 45px; font-size: 3.5rem; transform: rotate(-15deg); }
         #acc-sunglasses { top: 40px; left: 35px; font-size: 3rem; }
 
-        /* --- 統計與篩選 --- */
+        /* --- 統計看板 --- */
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -191,11 +209,6 @@
             transition: all 0.2s;
         }
 
-        .btn-outline:hover {
-            background: var(--primary);
-            color: white;
-        }
-
         /* --- 歷史清單 --- */
         .history-list { margin-top: 20px; }
         .history-item {
@@ -210,10 +223,7 @@
             transition: transform 0.2s ease;
         }
         
-        .history-item:hover {
-            transform: scale(1.01);
-            border-color: var(--primary);
-        }
+        .history-item:hover { transform: scale(1.01); border-color: var(--primary); }
 
         .history-tag {
             padding: 4px 10px;
@@ -227,12 +237,7 @@
         .tag-exp { background: #fff5f5; color: var(--danger); }
         .tag-inc { background: #ebfbee; color: var(--success); }
 
-        /* 刪除按鈕樣式 */
-        .history-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+        .history-right { display: flex; align-items: center; gap: 15px; }
 
         .btn-delete {
             background: #f8f9fa;
@@ -243,20 +248,9 @@
             padding: 8px;
             border-radius: 12px;
             transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        .btn-delete:hover {
-            color: var(--danger);
-            background: #fff5f5;
-            transform: rotate(10deg);
-        }
-
-        @media (max-width: 850px) {
-            .col-12, .col-8, .col-4 { grid-column: span 12; }
-        }
+        .btn-delete:hover { color: var(--danger); background: #fff5f5; transform: rotate(10deg); }
     </style>
 </head>
 <body>
@@ -265,13 +259,14 @@
     <!-- 1. 豪華標題與阿柴 -->
     <div class="card col-12 header-card">
         <div class="pet-stage" id="pet-stage">
-            <div class="level-badge" id="lv-badge">Lv.1 新手柴</div>
+            <div class="level-badge" id="lv-badge">Lv.1 初心柴</div>
+            <div class="streak-info">🔥 <span id="streak-days">1</span> 天</div>
             <span id="pet-main">🐕</span>
             <span id="acc-crown" class="accessory">👑</span>
             <span id="acc-sunglasses" class="accessory">🕶️</span>
         </div>
         <h1>SmartSpend 萌寵成長室</h1>
-        <p id="growth-text">汪！每一分錢錢都有阿柴幫你守護！✨</p>
+        <p id="growth-text">汪！每天來報到，阿柴會變更強喔！✨</p>
     </div>
 
     <!-- 2. 月度數據看板 -->
@@ -339,7 +334,7 @@
             <h2 style="margin: 0; font-size: 1.2rem;">📜 散步足跡</h2>
             <div style="display: flex; gap: 10px;">
                 <button class="btn-outline" onclick="exportData()">📤 匯出 CSV</button>
-                <button onclick="clearAll()" style="background: none; border: none; color: #adb5bd; cursor: pointer; text-decoration: underline; font-size: 0.8rem;">清除紀錄</button>
+                <button onclick="clearAll()" style="background: none; border: none; color: #adb5bd; cursor: pointer; text-decoration: underline; font-size: 0.8rem;">清除所有數據</button>
             </div>
         </div>
         <div id="history" class="history-list"></div>
@@ -348,17 +343,50 @@
 
 <script>
     const STORAGE_KEY = 'smartspend_deluxe_v1';
+    const STREAK_KEY = 'smartspend_streak_v1';
+    
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let streakData = JSON.parse(localStorage.getItem(STREAK_KEY)) || { count: 0, lastDate: "" };
     let expenseChart;
 
     window.onload = () => {
         const now = new Date();
+        // 處理登入天數邏輯
+        processLoginStreak(now);
+        
         document.getElementById('record-date').value = now.toISOString().split('T')[0];
         initYearFilter(now.getFullYear());
         document.getElementById('month-filter').value = String(now.getMonth() + 1).padStart(2, '0');
         initChart();
         updateUI();
     };
+
+    // --- 連續登入計算邏輯 ---
+    function processLoginStreak(today) {
+        const todayStr = today.toISOString().split('T')[0];
+        const lastStr = streakData.lastDate;
+
+        if (lastStr === "") {
+            // 第一次使用
+            streakData.count = 1;
+        } else if (lastStr === todayStr) {
+            // 今天已經算過了，不做事
+        } else {
+            const lastDate = new Date(lastStr);
+            const diffTime = Math.abs(today - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays <= 1.5) { // 判斷是否為「隔天」
+                streakData.count += 1;
+            } else {
+                // 超過一天沒登入，重置
+                streakData.count = 1;
+            }
+        }
+        streakData.lastDate = todayStr;
+        localStorage.setItem(STREAK_KEY, JSON.stringify(streakData));
+        document.getElementById('streak-days').innerText = streakData.count;
+    }
 
     function initYearFilter(curr) {
         const select = document.getElementById('year-filter');
@@ -400,24 +428,19 @@
         if(!desc || isNaN(amount)) return alert("汪！主人的資料還沒填齊喔！");
 
         records.push({ id: Date.now(), date, desc, amount, category, type });
-        saveData();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
         
         document.getElementById('desc').value = '';
         document.getElementById('amount').value = '';
         updateUI();
     }
 
-    // --- 單筆刪除功能 ---
     function deleteRecord(id) {
         if(confirm("汪！真的要把這筆足跡擦掉嗎？")) {
             records = records.filter(r => r.id !== id);
-            saveData();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
             updateUI();
         }
-    }
-
-    function saveData() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     }
 
     function updateUI() {
@@ -450,7 +473,7 @@
                         <div class="stat-value" style="color: ${r.type==='收入'?'var(--success)':'var(--danger)'}">
                             ${r.type==='收入'?'+':'-'}$${r.amount}
                         </div>
-                        <button class="btn-delete" onclick="deleteRecord(${r.id})" title="刪除紀錄">🗑️</button>
+                        <button class="btn-delete" onclick="deleteRecord(${r.id})">🗑️</button>
                     </div>
                 </div>
             `;
@@ -460,11 +483,10 @@
         document.getElementById('total-expense').innerText = `$${exp}`;
         document.getElementById('total-balance').innerText = `$${inc - exp}`;
 
-        // 更新圖表
         expenseChart.data.datasets[0].data = Object.values(cats);
         expenseChart.update();
 
-        // 阿柴狀態與等級檢查
+        // 阿柴狀態更新
         updatePetAndLevel(inc, exp);
     }
 
@@ -476,42 +498,49 @@
         const badge = document.getElementById('lv-badge');
         const balance = inc - exp;
 
-        // 配件邏輯
-        if(balance > 5000) crown.classList.add('unlocked');
-        else crown.classList.remove('unlocked');
-
-        if(records.length >= 5) sun.classList.add('unlocked');
+        // --- 根據連續登入天數解鎖配件 ---
+        // 3天解鎖墨鏡
+        if(streakData.count >= 3) sun.classList.add('unlocked');
         else sun.classList.remove('unlocked');
 
-        // 心情邏輯
+        // 7天解鎖皇冠
+        if(streakData.count >= 7) crown.classList.add('unlocked');
+        else crown.classList.remove('unlocked');
+
+        // --- 心情邏輯 ---
         if(balance < 0) {
             document.getElementById('pet-main').innerText = "🥺";
             text.innerText = "汪...骨頭透支了，我們要節約一點喔！";
         } else {
             document.getElementById('pet-main').innerText = "🐕";
-            text.innerText = "汪！每一分錢錢都有阿柴幫你守護！✨";
         }
 
-        // 等級進化邏輯
-        const totalCount = records.length;
-        let lv = 1, lvName = "新手柴";
+        // --- 等級進化邏輯 (基於連續登入天數) ---
+        const days = streakData.count;
+        let lv = 1, lvName = "初心柴";
 
-        if (totalCount >= 30) {
-            lv = 4; lvName = "理財大師";
+        if (days >= 30) {
+            lv = 4; lvName = "恆心大師";
             stage.classList.add('master-glow');
-        } else if (totalCount >= 15) {
-            lv = 3; lvName = "記帳達人";
+        } else if (days >= 7) {
+            lv = 3; lvName = "自律柴";
             stage.classList.remove('master-glow');
-        } else if (totalCount >= 5) {
-            lv = 2; lvName = "勤奮柴";
+        } else if (days >= 3) {
+            lv = 2; lvName = "熱血柴";
             stage.classList.remove('master-glow');
         } else {
-            lv = 1; lvName = "新手柴";
+            lv = 1; lvName = "初心柴";
             stage.classList.remove('master-glow');
         }
 
         badge.innerText = `Lv.${lv} ${lvName}`;
-        if(lv === 4) text.innerText = "汪！主人已經成為理財大師，阿柴覺得好耀眼！✨👑";
+        
+        // 特殊對話更新
+        if (days >= 30) {
+            text.innerText = "汪！主人已經堅持了 30 天，你就是阿柴心目中的大師！👑";
+        } else if (days >= 1) {
+            if (balance >= 0) text.innerText = `汪！連續登入第 ${days} 天，今天也要加油記帳喔！✨`;
+        }
     }
 
     function exportData() {
@@ -530,9 +559,9 @@
     }
 
     function clearAll() {
-        if(confirm("汪！確定要刪除所有紀錄嗎？")) {
+        if(confirm("汪！確定要清除所有紀錄嗎？（連續登入天數會保留喔！）")) {
             records = [];
-            saveData();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
             updateUI();
         }
     }
